@@ -1,50 +1,3 @@
-// 텍스트 응답
-export function replyText(text) {
-  return {
-    version: "2.0",
-    template: {
-      outputs: [
-        {
-          simpleText: { text }
-        }
-      ]
-    }
-  };
-}
-
-// 카드 응답
-export function replyCard(title, description) {
-  return {
-    version: "2.0",
-    template: {
-      outputs: [
-        {
-          basicCard: {
-            title,
-            description
-          }
-        }
-      ]
-    }
-  };
-}
-
-// 이미지 응답
-export function replyImage(imageUrl, altText = "이미지") {
-  return {
-    version: "2.0",
-    template: {
-      outputs: [
-        {
-          simpleImage: {
-            imageUrl,
-            altText
-          }
-        }
-      ]
-    }
-  };
-}
 // ✅ 텍스트 응답
 export function replyText(text) {
   return {
@@ -123,7 +76,7 @@ export function replyList(items = []) {
             header: {
               title: "루틴 목록"
             },
-            items: items.slice(0, 4), // 최대 4개만
+            items: items.slice(0, 4),
             buttons: [
               {
                 label: "전체 보기",
