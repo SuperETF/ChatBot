@@ -1,5 +1,3 @@
-console.log("📦 전체 req.body 확인:", req.body);
-
 import express from "express";
 import { supabase } from "../services/supabase.js";
 
@@ -22,6 +20,7 @@ function replyText(text) {
 }
 
 router.post("/", async (req, res) => {
+    console.log("📦 전체 req.body 확인:", req.body);
   const utterance = req.body.userRequest?.utterance;
   const kakaoId = req.body.user?.id;
 
