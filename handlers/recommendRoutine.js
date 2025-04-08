@@ -1,6 +1,6 @@
 import { openai } from "../services/openai.js";
 import { supabase } from "../services/supabase.js";
-import { replyText } from "../utils/replyText.js";
+import { replyCard } from "../utils/reply.js";
 
 export default async function recommendRoutine(kakaoId, utterance, res) {
   const { data: member } = await supabase
@@ -10,7 +10,7 @@ export default async function recommendRoutine(kakaoId, utterance, res) {
     .single();
 
   if (!member) {
-    return res.json(replyText("회원 정보가 없어요."));
+    return res.json(replyCard("회원 없음", "등록된 회원 정보가 없습니다."));
   }
 
   const prompt = `
@@ -30,5 +30,7 @@ export default async function recommendRoutine(kakaoId, utterance, res) {
   });
 
   const routine = completion.choices[0].message.content.trim();
-  return res.json(replyText(`추천 루틴입니다:\n\n${routine}`));
+
+  // ✅ 카드 응답 형태로 반환
+  return res.json(replyCard("GPT 추천 루틴", routine));
 }
