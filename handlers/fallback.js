@@ -12,7 +12,7 @@ export default async function fallback(kakaoId, utterance, res) {
 - 심박수 입력
 - 내 정보 조회
 
-형식: "혹시 ○○ 기능을 원하신 건가요?"
+형식: 혹시 ○○ 기능을 원하신 건가요?
 `;
 
   const result = await openai.chat.completions.create({

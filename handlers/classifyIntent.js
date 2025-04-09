@@ -8,6 +8,7 @@ export default async function classifyIntent(utterance) {
 - 식단 추천
 - 심박수 입력
 - 내 정보 조회
+- 문장이 "홍길동 01012345678"처럼 보이면 → "회원 등록" intent 반환
 - 기타
 
 반드시 위 항목 중 하나만 출력해.  
