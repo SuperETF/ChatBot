@@ -3,16 +3,17 @@ import { replyButton } from "../utils/reply.js";
 
 export default async function fallback(kakaoId, utterance, res) {
   const prompt = `
-사용자가 이렇게 말했습니다: "${utterance}"
+사용자 발화: "${utterance}"
 
-이 문장을 아래 기능 중 가장 가까운 것으로 제안해주세요:
+이 발화가 어떤 기능 요청에 가까운지 아래 중 하나로 제안해줘:
 - 운동 예약
 - 루틴 추천
 - 식단 추천
 - 심박수 입력
 - 내 정보 조회
+- 회원 등록
 
-형식: 혹시 ○○ 기능을 원하신 건가요?
+형식: "혹시 ○○ 기능을 원하신 건가요?"
 `;
 
   const result = await openai.chat.completions.create({
@@ -21,7 +22,9 @@ export default async function fallback(kakaoId, utterance, res) {
     temperature: 0.6
   });
 
-  return res.json(replyButton(result.choices[0].message.content.trim(), [
+  const suggestion = result.choices[0].message.content.trim();
+
+  return res.json(replyButton(suggestion, [
     "운동 예약", "루틴 추천", "식단 추천", "심박수 입력", "내 정보"
   ]));
 }
