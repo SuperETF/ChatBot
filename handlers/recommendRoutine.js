@@ -25,8 +25,8 @@ export default async function recommendRoutine(kakaoId, utterance, res) {
 - 목표: ${member.goal || "체지방 감량"}
 - 요청: ${utterance}
 
-위 회원을 위한 주 3일 운동 루틴을 추천해줘.
-각 요일마다 부위와 운동 예시 포함, 간단하게 설명해줘.
+이 정보를 바탕으로 주 3일 루틴을 추천해줘.
+요일별로 부위 + 간단한 운동 예시 형태로 작성.
 `;
 
     const result = await openai.chat.completions.create({
@@ -35,11 +35,9 @@ export default async function recommendRoutine(kakaoId, utterance, res) {
       temperature: 0.7
     });
 
-    const routine = result.choices[0].message.content.trim();
-
-    return res.json(replyText(routine));
-  } catch (error) {
-    console.error("❌ 루틴 추천 에러:", error);
-    return res.json(replyText("루틴 추천 중 문제가 발생했습니다. 나중에 다시 시도해주세요."));
+    return res.json(replyText(result.choices[0].message.content.trim()));
+  } catch (err) {
+    console.error("❌ 루틴 추천 오류:", err);
+    return res.json(replyText("루틴 추천 중 문제가 발생했어요. 다시 시도해주세요."));
   }
 }
