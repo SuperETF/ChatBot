@@ -13,7 +13,7 @@ export default async function fallback(kakaoId, utterance, res) {
 - 내 정보 조회
 - 회원 등록
 
-형식: "혹시 ○○ 기능을 원하신 건가요?"
+혹시 ○○ 기능을 원하신 건가요?
 `;
 
   const result = await openai.chat.completions.create({
@@ -25,6 +25,6 @@ export default async function fallback(kakaoId, utterance, res) {
   const suggestion = result.choices[0].message.content.trim();
 
   return res.json(replyButton(suggestion, [
-    "운동 예약", "루틴 추천", "식단 추천", "심박수 입력", "내 정보"
+    "회원 등록", "상담 연결", "운동 예약"
   ]));
 }
