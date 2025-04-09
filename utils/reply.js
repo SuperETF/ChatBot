@@ -65,7 +65,7 @@ export function replyButton(text, buttons) {
   };
 }
 
-// ✅ 리스트 응답 (목록형 UI)
+// ✅ 리스트 응답 (4개 이하 항목)
 export function replyList(items = []) {
   return {
     version: "2.0",
