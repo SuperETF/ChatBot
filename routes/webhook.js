@@ -67,7 +67,7 @@ router.post("/", async (req, res) => {
     if (intent === "체성분 입력") return recordBodyComposition(kakaoId, utterance, res);
     if (intent === "통증 입력") return recordPainReport(kakaoId, utterance, res);
     if (intent === "가용 시간 등록") return registerAvailability(kakaoId, utterance, res);
-    if (intent === "트레이너 회원 등록") return trainerRegisterMember(kakaoId, utterance, res);
+    if (intent === "전문가 회원 등록") return trainerRegisterMember(kakaoId, utterance, res);
   }
 
   // 공통 기능 처리
