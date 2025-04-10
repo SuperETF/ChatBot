@@ -1,4 +1,4 @@
-// ✅ classifyIntent.js – 트레이너/회원 등록 구분 포함
+// ✅ classifyIntent.js – 회원/트레이너 등록 구분 포함 최종 버전
 
 import { openai } from "../services/openai.js";
 
@@ -13,6 +13,7 @@ export default async function classifyIntent(utterance) {
 - 내 정보 조회
 - 회원 등록
 - 트레이너 등록
+- 트레이너 회원 등록
 - 회원 목록 조회
 - 체성분 입력
 - 통증 입력
@@ -23,12 +24,13 @@ export default async function classifyIntent(utterance) {
 - 기타
 
 📌 규칙:
+- "회원 등록"으로 시작하면 → 반드시 "트레이너 회원 등록"
+- "회원"으로 시작하고 전화번호가 포함되면 → "회원 등록"
 - "트레이너 등록"이라는 문장이 포함되면 반드시 "트레이너 등록"
-- "회원 등록" 또는 이름 + 전화번호 조합이면 "회원 등록"
-- 전화번호(010 포함) + 트레이너 단어 포함 시 "트레이너 등록"
-- "회원 목록", "명단" 포함 시 "회원 목록 조회"
-- "체성분" 단어 포함되면 "체성분 입력"
-- "통증" + 숫자 포함되면 "통증 입력"
+- 전화번호(010 포함) + 트레이너 단어 포함 시 → "트레이너 등록"
+- "회원 목록", "명단" 포함 시 → "회원 목록 조회"
+- "체성분" 단어 포함되면 → "체성분 입력"
+- "통증" + 숫자 포함되면 → "통증 입력"
 - "시간 등록", "가능 시간" 포함 → "가용 시간 등록"
 - "개인 운동 예약" → "개인 운동 예약"
 - "개인 운동 시간" → "개인 운동 시간 조회"
@@ -48,3 +50,4 @@ export default async function classifyIntent(utterance) {
 
   return response.choices[0].message.content.trim();
 }
+
