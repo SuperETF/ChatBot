@@ -23,17 +23,18 @@ export default async function registerMember(kakaoId, utterance, res) {
   console.log("📞 전화번호:", phone);
   console.log("🧑‍💼 kakao_id:", kakaoId);
 
-  const { data: member, error } = await supabase
-    .from("members")
-    .select("*")
-    .eq("name", name)
-    .eq("phone", phone)
-    .maybeSingle();
+  const { data: member } = await supabase
+  .from("members")
+  .select("id, kakao_id")
+  .eq("name", name)
+  .eq("phone", phone)
+  .maybeSingle();
 
-  if (!member) {
-    console.log("❌ 일치하는 회원이 없습니다.");
-    return res.json(replyText("등록된 회원 정보를 찾을 수 없습니다."));
-  }
+console.log("🔍 Supabase에서 찾은 회원:", member);
+
+if (!member) {
+  return res.json(replyText("등록된 회원 정보를 찾을 수 없습니다."));
+}
 
   console.log("✅ 회원 찾음:", member.id);
 
