@@ -27,7 +27,8 @@ const handlerMap = {
   "식단 추천": recommendMeal,
   "심박수 입력": inputHeartRate,
   "내 정보 조회": showUserInfo,
-  "회원 등록": registerMember,
+  "등록": registerMember,
+  "회원 등록": trainerRegisterMember,
   "트레이너 등록": registerTrainer,
   "개인 운동 시간 조회": showPersonalWorkoutSlots,
   "개인 운동 예약": reservePersonalWorkout,
@@ -64,7 +65,7 @@ router.post("/", async (req, res) => {
     if (intent === "체성분 입력") return recordBodyComposition(kakaoId, utterance, res);
     if (intent === "통증 입력") return recordPainReport(kakaoId, utterance, res);
     if (intent === "가용 시간 등록") return registerAvailability(kakaoId, utterance, res);
-    if (intent === "트레이너 회원 등록") return trainerRegisterMember(kakaoId, utterance, res);
+    if (intent === "회원 등록") return trainerRegisterMember(kakaoId, utterance, res);
   }
 
   // 회원용 공통 기능
