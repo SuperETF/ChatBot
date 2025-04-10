@@ -65,7 +65,8 @@ router.post("/", async (req, res) => {
     if (intent === "체성분 입력") return recordBodyComposition(kakaoId, utterance, res);
     if (intent === "통증 입력") return recordPainReport(kakaoId, utterance, res);
     if (intent === "가용 시간 등록") return registerAvailability(kakaoId, utterance, res);
-    if (intent === "회원 등록") return trainerRegisterMember(kakaoId, utterance, res);
+    if (intent === "등록") return registerMember(kakaoId, utterance, res);
+    if (isTrainer && intent === "회원 등록") return trainerRegisterMember(kakaoId, utterance, res);
   }
 
   // 회원용 공통 기능
