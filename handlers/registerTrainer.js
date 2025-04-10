@@ -1,10 +1,10 @@
-// ✅ handlers/registerTrainer.js (리팩토링 + 정규식 안정화 + 로그 개선)
+// ✅ handlers/registerTrainer.js (리팩토링 + 정규식 안정화 + 변수 순서 수정)
 
 import { supabase } from "../services/supabase.js";
-import { replyText } from "../utils/reply.js";
+import { replyText, replyButton } from "../utils/reply.js";
 
 export default async function registerTrainer(kakaoId, utterance, res) {
-  // "트레이너 등록" 문구 제거 후 이름/번호 추출 시도
+  // "전문가" 문구 제거 후 이름/번호 추출 시도
   const cleaned = utterance.replace("전문가", "").trim();
   const nameMatch = cleaned.match(/[가-힣]{2,4}/);
   const phoneMatch = cleaned.match(/(01[016789]\d{7,8})/);
@@ -15,31 +15,28 @@ export default async function registerTrainer(kakaoId, utterance, res) {
 
   if (!nameMatch || !phoneMatch) {
     return res.json(replyText(
-      `트레이너 인증을 위해 성함과 전화번호를 함께 입력해주세요.\n예: 홍길동 01012345678`
-    ));
-  }
-
-  if (!trainer) {
-    return res.json(replyButton(
-      "트레이너로 등록된 정보가 없습니다. 등록을 원하시나요?",
-      ["전문가 등록", "다른 기능"]
+      `전문가 인증을 위해 성함과 전화번호를 입력해주세요.\n예: 전문가 홍길동 01012345678`
     ));
   }
 
   const name = nameMatch[0];
   const phone = phoneMatch[0];
 
-  const { data: trainers } = await supabase
+  // Supabase에서 트레이너 조회
+  const { data: trainer } = await supabase
     .from("trainers")
     .select("id, kakao_id")
     .eq("name", name)
     .eq("phone", phone)
     .maybeSingle();
 
-  console.log("🔍 Supabase에서 찾은 트레이너:", trainers);
+  console.log("🔍 Supabase에서 찾은 트레이너:", trainer);
 
   if (!trainer) {
-    return res.json(replyText("등록된 트레이너 정보를 찾을 수 없습니다. 관리자에게 문의해주세요."));
+    return res.json(replyButton(
+      "전문가로 등록된 정보가 없습니다. 등록을 원하시나요?",
+      ["전문가 등록", "다른 기능"]
+    ));
   }
 
   if (trainer.kakao_id && trainer.kakao_id !== kakaoId) {
@@ -60,4 +57,3 @@ export default async function registerTrainer(kakaoId, utterance, res) {
     `✅ ${name} 트레이너님, 인증이 완료되었습니다!\n원하시는 작업을 입력해주세요.`
   ));
 }
-

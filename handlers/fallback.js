@@ -22,7 +22,7 @@ export default async function fallback(kakaoId, utterance, res) {
 - 통증 입력
 
 📌 규칙:
-- "○○ 기능을 원하시는 건가요?" 같은 친절한 질문 형태로 출력
+- ○○ 기능을 원하시는 건가요? 같은 친절한 질문 형태로 출력
 - 항목 중 하나만 제안
 - 문장은 1줄로 간결하게
   `;
