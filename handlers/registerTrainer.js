@@ -36,6 +36,11 @@ export default async function registerTrainer(kakaoId, utterance, res) {
     .update({ kakao_id: kakaoId })
     .eq("id", trainer.id);
 
+    console.log("🧩 추출된 이름:", name);
+console.log("📞 추출된 전화번호:", phone);
+console.log("🧑‍💼 사용자 kakao_id:", kakaoId);
+
+
   if (error) {
     return res.json(replyText("트레이너 인증 중 문제가 발생했습니다. 다시 시도해주세요."));
   }
