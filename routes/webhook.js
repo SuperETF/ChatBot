@@ -1,6 +1,7 @@
 // ✅ webhook.js 업데이트 – 트레이너 회원 등록 분기 추가
 
 import express from "express";
+import { supabase } from "../services/supabase.js";
 import classifyIntent from "../handlers/classifyIntent.js";
 
 import reserveWorkout from "../handlers/reserveWorkout.js";
