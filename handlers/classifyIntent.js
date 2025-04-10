@@ -5,7 +5,7 @@ import { openai } from "../services/openai.js";
 export default async function classifyIntent(utterance) {
   // ✅ 직접 분기 처리: 우선순위 높은 고정 패턴은 여기서 처리
   if (utterance.startsWith("전문가")) return "전문가 등록";
-  if (utterance.startsWith("회원 등록")) return "트레이너 회원 등록";
+  if (utterance.startsWith("회원 등록")) return "전문가 회원 등록";
   if (utterance.startsWith("회원")) return "회원 등록";
 
   // ✅ GPT 보조 분기 처리

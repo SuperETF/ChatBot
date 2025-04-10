@@ -22,7 +22,7 @@ export default async function trainerRegisterMember(kakaoId, utterance, res) {
     .single();
 
   if (!trainer) {
-    return res.json(replyText("트레이너 인증이 되지 않았습니다. 먼저 '전문가 등록'을 진행해주세요."));
+    return res.json(replyText("전문가 인증이 되지 않았습니다. 먼저 '전문가 등록'을 진행해주세요."));
   }
 
   // ✅ 중복 확인
