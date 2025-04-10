@@ -4,8 +4,9 @@ import { supabase } from "../services/supabase.js";
 import { replyText } from "../utils/reply.js";
 
 export default async function trainerRegisterMember(kakaoId, utterance, res) {
-  const nameMatch = utterance.match(/[가-힣]{2,4}/);
-  const phoneMatch = utterance.match(/(01[016789][0-9]{7,8})/);
+    const cleaned = utterance.replace("회원 등록", "").trim();
+    const nameMatch = cleaned.match(/[가-힣]{2,4}/);
+    const phoneMatch = cleaned.match(/(01[016789]\d{7,8})/);
 
   if (!nameMatch || !phoneMatch) {
     return res.json(replyText("회원 등록 형식을 확인해주세요.\n예: 회원 등록 홍길동 01012345678"));
