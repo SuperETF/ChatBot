@@ -1,4 +1,4 @@
-// ✅ handlers/trainerRegisterMember.js
+// ✅ handlers/trainerRegisterMember.js – 트레이너 ID 포함 리팩토링
 
 import { supabase } from "../services/supabase.js";
 import { replyText } from "../utils/reply.js";
@@ -8,13 +8,24 @@ export default async function trainerRegisterMember(kakaoId, utterance, res) {
   const phoneMatch = utterance.match(/(01[016789][0-9]{7,8})/);
 
   if (!nameMatch || !phoneMatch) {
-    return res.json(replyText("회원 등록 형식을 확인해주세요.\n예: 홍길동 01012345678 회원 등록"));
+    return res.json(replyText("회원 등록 형식을 확인해주세요.\n예: 회원 등록 홍길동 01012345678"));
   }
 
   const name = nameMatch[0];
   const phone = phoneMatch[0];
 
-  // 이미 존재하는지 확인
+  // ✅ 트레이너 식별
+  const { data: trainer } = await supabase
+    .from("trainers")
+    .select("id")
+    .eq("kakao_id", kakaoId)
+    .single();
+
+  if (!trainer) {
+    return res.json(replyText("트레이너 인증이 되지 않았습니다. 먼저 '전문가 등록'을 진행해주세요."));
+  }
+
+  // ✅ 중복 확인
   const { data: existing } = await supabase
     .from("members")
     .select("id")
@@ -26,9 +37,10 @@ export default async function trainerRegisterMember(kakaoId, utterance, res) {
     return res.json(replyText("이미 등록된 회원입니다."));
   }
 
+  // ✅ 트레이너 ID 포함하여 등록
   const { error } = await supabase
     .from("members")
-    .insert({ name, phone });
+    .insert({ name, phone, trainer_id: trainer.id });
 
   if (error) {
     console.error("❌ 회원 등록 실패:", error);
