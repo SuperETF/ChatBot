@@ -29,7 +29,7 @@ const handlerMap = {
   "식단 추천": recommendMeal,
   "심박수 입력": inputHeartRate,
   "내 정보 조회": showUserInfo,
-  "등록": registerMember,
+  "회원": registerMember,
   "개인 운동 시간 조회": showPersonalWorkoutSlots,
   "개인 운동 예약": reservePersonalWorkout,
   "개인 운동 예약 취소": cancelPersonalWorkout,
@@ -67,7 +67,7 @@ router.post("/", async (req, res) => {
     if (intent === "체성분 입력") return recordBodyComposition(kakaoId, utterance, res);
     if (intent === "통증 입력") return recordPainReport(kakaoId, utterance, res);
     if (intent === "가용 시간 등록") return registerAvailability(kakaoId, utterance, res);
-    if (intent === "전문가 회원 등록") return trainerRegisterMember(kakaoId, utterance, res);
+    if (intent === "회원 등록") return trainerRegisterMember(kakaoId, utterance, res);
   }
 
   // 공통 기능 처리
