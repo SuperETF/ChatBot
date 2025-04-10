@@ -32,7 +32,8 @@ const handlerMap = {
   "등록": registerMember,
   "개인 운동 시간 조회": showPersonalWorkoutSlots,
   "개인 운동 예약": reservePersonalWorkout,
-  "개인 운동 예약 취소": cancelPersonalWorkout
+  "개인 운동 예약 취소": cancelPersonalWorkout,
+  "전문가 등록": registerTrainer,
 };
 
 router.post("/", async (req, res) => {

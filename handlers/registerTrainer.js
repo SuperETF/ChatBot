@@ -2,6 +2,8 @@
 
 import { supabase } from "../services/supabase.js";
 import { replyText, replyButton } from "../utils/reply.js";
+console.log("✅ registerTrainer 실행됨");
+
 
 export default async function registerTrainer(kakaoId, utterance, res) {
   // "전문가" 문구 제거 후 이름/번호 추출 시도
