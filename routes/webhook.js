@@ -1,3 +1,5 @@
+// ✅ webhook.js – 전문가 회원 등록 분기 포함 최종 안정화
+
 import express from "express";
 import { supabase } from "../services/supabase.js";
 import classifyIntent from "../handlers/classifyIntent.js";
@@ -28,8 +30,6 @@ const handlerMap = {
   "심박수 입력": inputHeartRate,
   "내 정보 조회": showUserInfo,
   "등록": registerMember,
-  "회원 등록": trainerRegisterMember,
-  "트레이너 등록": registerTrainer,
   "개인 운동 시간 조회": showPersonalWorkoutSlots,
   "개인 운동 예약": reservePersonalWorkout,
   "개인 운동 예약 취소": cancelPersonalWorkout
@@ -45,12 +45,12 @@ router.post("/", async (req, res) => {
   const intent = await classifyIntent(utterance);
   console.log("🧠 GPT 분류 결과:", intent);
 
-  // 트레이너 등록은 kakao_id 없을 수 있으므로 반드시 먼저 처리
-  if (intent === "트레이너 등록") {
+  // 트레이너 등록은 항상 먼저 처리
+  if (intent === "전문가 등록") {
     return registerTrainer(kakaoId, utterance, res);
   }
 
-  // 트레이너 여부 확인
+  // 트레이너 여부 판단
   const { data: trainer } = await supabase
     .from("trainers")
     .select("id")
@@ -59,19 +59,19 @@ router.post("/", async (req, res) => {
 
   const isTrainer = !!trainer;
 
-  // 트레이너 전용 기능 분기
+  // 트레이너 전용 intent
   if (isTrainer) {
     if (intent === "회원 목록 조회") return listMembers(kakaoId, utterance, res);
     if (intent === "체성분 입력") return recordBodyComposition(kakaoId, utterance, res);
     if (intent === "통증 입력") return recordPainReport(kakaoId, utterance, res);
     if (intent === "가용 시간 등록") return registerAvailability(kakaoId, utterance, res);
-    if (intent === "등록") return registerMember(kakaoId, utterance, res);
-    if (isTrainer && intent === "회원 등록") return trainerRegisterMember(kakaoId, utterance, res);
+    if (intent === "트레이너 회원 등록") return trainerRegisterMember(kakaoId, utterance, res);
   }
 
-  // 회원용 공통 기능
+  // 공통 기능 처리
   const handler = handlerMap[intent] || fallback;
   return handler(kakaoId, utterance, res);
 });
 
 export default router;
+
