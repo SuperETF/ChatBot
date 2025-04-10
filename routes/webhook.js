@@ -28,6 +28,7 @@ const handlerMap = {
   "심박수 입력": inputHeartRate,
   "내 정보 조회": showUserInfo,
   "회원 등록": registerMember,
+  "트레이너 등록": registerTrainer,
   "개인 운동 시간 조회": showPersonalWorkoutSlots,
   "개인 운동 예약": reservePersonalWorkout,
   "개인 운동 예약 취소": cancelPersonalWorkout
