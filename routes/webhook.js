@@ -1,3 +1,5 @@
+// ✅ webhook.js 업데이트 – 트레이너 회원 등록 분기 추가
+
 import express from "express";
 import classifyIntent from "../handlers/classifyIntent.js";
 
@@ -7,6 +9,15 @@ import showUserInfo from "../handlers/showUserInfo.js";
 import inputHeartRate from "../handlers/inputHeartRate.js";
 import recommendMeal from "../handlers/recommendMeal.js";
 import registerMember from "../handlers/registerMember.js";
+import registerTrainer from "../handlers/registerTrainer.js";
+import listMembers from "../handlers/listMembers.js";
+import recordBodyComposition from "../handlers/recordBodyComposition.js";
+import recordPainReport from "../handlers/recordPainReport.js";
+import registerAvailability from "../handlers/registerAvailability.js";
+import showPersonalWorkoutSlots from "../handlers/showPersonalWorkoutSlots.js";
+import reservePersonalWorkout from "../handlers/reservePersonalWorkout.js";
+import cancelPersonalWorkout from "../handlers/cancelPersonalWorkout.js";
+import trainerRegisterMember from "../handlers/trainerRegisterMember.js";
 import fallback from "../handlers/fallback.js";
 
 const router = express.Router();
@@ -18,6 +29,14 @@ router.post("/", async (req, res) => {
   console.log("📩 사용자 발화:", utterance);
   console.log("🧑‍💼 사용자 ID:", kakaoId);
 
+  const { data: trainer } = await supabase
+    .from("trainers")
+    .select("id")
+    .eq("kakao_id", kakaoId)
+    .maybeSingle();
+
+  const isTrainer = !!trainer;
+
   const intent = await classifyIntent(utterance);
   console.log("🧠 GPT 분류 결과:", intent);
 
@@ -27,8 +46,20 @@ router.post("/", async (req, res) => {
     "식단 추천": recommendMeal,
     "심박수 입력": inputHeartRate,
     "내 정보 조회": showUserInfo,
-    "회원 등록": registerMember
+    "회원 등록": registerMember,
+    "트레이너 등록": registerTrainer,
+    "개인 운동 시간 조회": showPersonalWorkoutSlots,
+    "개인 운동 예약": reservePersonalWorkout,
+    "개인 운동 예약 취소": cancelPersonalWorkout
   };
+
+  if (isTrainer) {
+    if (intent === "회원 목록 조회") return listMembers(kakaoId, utterance, res);
+    if (intent === "체성분 입력") return recordBodyComposition(kakaoId, utterance, res);
+    if (intent === "통증 입력") return recordPainReport(kakaoId, utterance, res);
+    if (intent === "가용 시간 등록") return registerAvailability(kakaoId, utterance, res);
+    if (intent === "트레이너 회원 등록") return trainerRegisterMember(kakaoId, utterance, res);
+  }
 
   const handler = handlerMap[intent] || fallback;
   return handler(kakaoId, utterance, res);

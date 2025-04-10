@@ -1,0 +1,74 @@
+{
+    "displayName": "HealthBot Admin Dashboard",
+    "components": [
+      {
+        "type": "Table",
+        "name": "membersTable",
+        "props": {
+          "data": "{{ query_members.data }}",
+          "title": "회원 목록"
+        }
+      },
+      {
+        "type": "Form",
+        "name": "bodyCompositionForm",
+        "props": {
+          "title": "체성분 입력",
+          "fields": [
+            { "type": "Dropdown", "name": "member_id", "label": "회원 선택", "data": "{{ query_members.data.map(m => ({ label: m.name, value: m.id })) }}" },
+            { "type": "TextInput", "name": "weight", "label": "체중 (kg)" },
+            { "type": "TextInput", "name": "body_fat", "label": "체지방률 (%)" },
+            { "type": "TextInput", "name": "muscle_mass", "label": "골격근량 (kg)" },
+            { "type": "TextInput", "name": "bmi", "label": "BMI" },
+            { "type": "Button", "name": "submitBodyComp", "label": "저장하기", "action": "{{ insert_body_comp.run() }}" }
+          ]
+        }
+      },
+      {
+        "type": "Form",
+        "name": "painReportForm",
+        "props": {
+          "title": "통증 보고",
+          "fields": [
+            { "type": "Dropdown", "name": "member_id", "label": "회원 선택", "data": "{{ query_members.data.map(m => ({ label: m.name, value: m.id })) }}" },
+            { "type": "TextInput", "name": "area", "label": "통증 부위" },
+            { "type": "NumberInput", "name": "severity", "label": "강도 (1~10)", "min": 1, "max": 10 },
+            { "type": "Button", "name": "submitPain", "label": "저장하기", "action": "{{ insert_pain_report.run() }}" }
+          ]
+        }
+      },
+      {
+        "type": "Form",
+        "name": "routineForm",
+        "props": {
+          "title": "루틴 등록",
+          "fields": [
+            { "type": "Dropdown", "name": "member_id", "label": "회원 선택", "data": "{{ query_members.data.map(m => ({ label: m.name, value: m.id })) }}" },
+            { "type": "Textarea", "name": "routine_json", "label": "루틴 JSON 내용" },
+            { "type": "Button", "name": "submitRoutine", "label": "등록", "action": "{{ insert_routine.run() }}" }
+          ]
+        }
+      },
+      {
+        "type": "Form",
+        "name": "mealPhotoUpload",
+        "props": {
+          "title": "식단 인증 사진 업로드",
+          "fields": [
+            { "type": "Dropdown", "name": "member_id", "label": "회원 선택", "data": "{{ query_members.data.map(m => ({ label: m.name, value: m.id })) }}" },
+            { "type": "TextInput", "name": "image_url", "label": "사진 URL (이미지 업로드 후 주소 붙여넣기)" },
+            { "type": "TextInput", "name": "feedback", "label": "메모/피드백" },
+            { "type": "Button", "name": "submitMealPhoto", "label": "업로드", "action": "{{ insert_meal_photo.run() }}" }
+          ]
+        }
+      }
+    ],
+    "queries": [
+      { "name": "query_members", "resource": "supabase", "sql": "SELECT id, name FROM members ORDER BY name" },
+      { "name": "insert_body_comp", "resource": "supabase", "sql": "INSERT INTO body_compositions (member_id, weight, body_fat, muscle_mass, bmi) VALUES ({{ bodyCompositionForm.member_id.value }}, {{ bodyCompositionForm.weight.value }}, {{ bodyCompositionForm.body_fat.value }}, {{ bodyCompositionForm.muscle_mass.value }}, {{ bodyCompositionForm.bmi.value }})" },
+      { "name": "insert_pain_report", "resource": "supabase", "sql": "INSERT INTO pain_reports (member_id, area, severity) VALUES ({{ painReportForm.member_id.value }}, '{{ painReportForm.area.value }}', {{ painReportForm.severity.value }})" },
+      { "name": "insert_routine", "resource": "supabase", "sql": "INSERT INTO routines (member_id, routine_json) VALUES ({{ routineForm.member_id.value }}, {{ routineForm.routine_json.value }})" },
+      { "name": "insert_meal_photo", "resource": "supabase", "sql": "INSERT INTO meal_photos (member_id, image_url, feedback) VALUES ({{ mealPhotoUpload.member_id.value }}, '{{ mealPhotoUpload.image_url.value }}', '{{ mealPhotoUpload.feedback.value }}')" }
+    ]
+  }
+  
