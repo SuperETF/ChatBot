@@ -22,14 +22,14 @@ export default async function registerTrainer(kakaoId, utterance, res) {
   const name = nameMatch[0];
   const phone = phoneMatch[0];
 
-  const { data: trainer } = await supabase
+  const { data: trainers } = await supabase
     .from("trainers")
     .select("id, kakao_id")
     .eq("name", name)
     .eq("phone", phone)
     .maybeSingle();
 
-  console.log("🔍 Supabase에서 찾은 트레이너:", trainer);
+  console.log("🔍 Supabase에서 찾은 트레이너:", trainers);
 
   if (!trainer) {
     return res.json(replyText("등록된 트레이너 정보를 찾을 수 없습니다. 관리자에게 문의해주세요."));
