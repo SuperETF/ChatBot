@@ -1,19 +1,14 @@
+// ✅ registerMember.js (회원 본인 등록 최종 안정화)
+
 import { supabase } from "../services/supabase.js";
-import { replyText } from "../utils/reply.js";
+import { replyText, replyButton } from "../utils/reply.js";
 
 export default async function registerMember(kakaoId, utterance, res) {
   const nameMatch = utterance.match(/[가-힣]{2,4}/);
   const phoneMatch = utterance.match(/(01[016789][0-9]{7,8})/);
 
   if (!nameMatch || !phoneMatch) {
-    return res.json(replyText(`성함과 전화번호를 함께 입력해주세요. 예: 홍길동 01012345678`));
-  }
-
-  if (!member) {
-    return res.json(replyButton(
-      "등록된 회원 정보를 찾을 수 없습니다. 처음 이용자시라면 등록을 진행해주세요.",
-      ["회원 등록", "도움말 보기"]
-    ));
+    return res.json(replyText(`성함과 전화번호를 함께 입력해주세요.\n예: 회원 홍길동 01012345678`));
   }
 
   const name = nameMatch[0];
@@ -24,17 +19,20 @@ export default async function registerMember(kakaoId, utterance, res) {
   console.log("🧑‍💼 kakao_id:", kakaoId);
 
   const { data: member } = await supabase
-  .from("members")
-  .select("id, kakao_id")
-  .eq("name", name)
-  .eq("phone", phone)
-  .maybeSingle();
+    .from("members")
+    .select("id, kakao_id")
+    .eq("name", name)
+    .eq("phone", phone)
+    .maybeSingle();
 
-console.log("🔍 Supabase에서 찾은 회원:", member);
+  console.log("🔍 Supabase에서 찾은 회원:", member);
 
-if (!member) {
-  return res.json(replyText("등록된 회원 정보를 찾을 수 없습니다."));
-}
+  if (!member) {
+    return res.json(replyButton(
+      "등록된 회원 정보를 찾을 수 없습니다. 처음 이용자시라면 등록을 진행해주세요.",
+      ["회원 등록", "도움말 보기"]
+    ));
+  }
 
   console.log("✅ 회원 찾음:", member.id);
 
@@ -52,3 +50,4 @@ if (!member) {
 
   return res.json(replyText(`${name}님, 등록이 완료되었습니다.`));
 }
+
