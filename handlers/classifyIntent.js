@@ -3,6 +3,12 @@
 import { openai } from "../services/openai.js";
 
 export default async function classifyIntent(utterance) {
+  // ✅ 직접 분기 처리: 우선순위 높은 고정 패턴은 여기서 처리
+  if (utterance.startsWith("전문가")) return "트레이너 등록";
+  if (utterance.startsWith("회원 등록")) return "트레이너 회원 등록";
+  if (utterance.startsWith("회원")) return "회원 등록";
+
+  // ✅ GPT 보조 분기 처리
   const prompt = `
 다음 사용자 발화를 아래 기능 중 하나로 정확하게 분류해주세요:
 
@@ -24,10 +30,9 @@ export default async function classifyIntent(utterance) {
 - 기타
 
 📌 규칙:
-- "회원 등록"으로 시작하면 → 반드시 "트레이너 회원 등록"
+- "회원 등록"으로 시작하면 반드시 "트레이너 회원 등록"
 - "회원"으로 시작하고 전화번호가 포함되면 → "회원 등록"
-- "트레이너 등록"이라는 문장이 포함되면 반드시 "트레이너 등록"
-- 전화번호(010 포함) + 트레이너 단어 포함 시 → "트레이너 등록"
+- "전문가"로 시작하면 → 반드시 "트레이너 등록"
 - "회원 목록", "명단" 포함 시 → "회원 목록 조회"
 - "체성분" 단어 포함되면 → "체성분 입력"
 - "통증" + 숫자 포함되면 → "통증 입력"

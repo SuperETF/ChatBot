@@ -9,6 +9,13 @@ export default async function registerMember(kakaoId, utterance, res) {
     return res.json(replyText(`성함과 전화번호를 함께 입력해주세요. 예: 홍길동 01012345678`));
   }
 
+  if (!member) {
+    return res.json(replyButton(
+      "등록된 회원 정보를 찾을 수 없습니다. 처음 이용자시라면 등록을 진행해주세요.",
+      ["회원 등록", "도움말 보기"]
+    ));
+  }
+
   const name = nameMatch[0];
   const phone = phoneMatch[0];
 

@@ -5,7 +5,7 @@ import { replyText } from "../utils/reply.js";
 
 export default async function registerTrainer(kakaoId, utterance, res) {
   // "트레이너 등록" 문구 제거 후 이름/번호 추출 시도
-  const cleaned = utterance.replace("트레이너 등록", "").trim();
+  const cleaned = utterance.replace("전문가", "").trim();
   const nameMatch = cleaned.match(/[가-힣]{2,4}/);
   const phoneMatch = cleaned.match(/(01[016789]\d{7,8})/);
 
@@ -15,7 +15,14 @@ export default async function registerTrainer(kakaoId, utterance, res) {
 
   if (!nameMatch || !phoneMatch) {
     return res.json(replyText(
-      `트레이너 인증을 위해 성함과 전화번호를 함께 입력해주세요.\n예: 김태현 01012345678`
+      `트레이너 인증을 위해 성함과 전화번호를 함께 입력해주세요.\n예: 홍길동 01012345678`
+    ));
+  }
+
+  if (!trainer) {
+    return res.json(replyButton(
+      "트레이너로 등록된 정보가 없습니다. 등록을 원하시나요?",
+      ["전문가 등록", "다른 기능"]
     ));
   }
 
