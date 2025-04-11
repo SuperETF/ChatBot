@@ -1,5 +1,6 @@
 import { openai } from "../services/openai.js";
 import { fetchRecentHistory } from "../utils/fetchHistoryForRAG.js";
+import { fetchRecentFallback } from "../utils/fetchRecentFallback.js";
 
 const YES_KEYWORDS = ["네", "그래", "응", "좋아", "알겠어", "등록 원해", "등록할게", "진행해"];
 const NO_KEYWORDS = ["아니요", "아니", "괜찮아요", "안 할래", "지금은 아니야"];
@@ -61,11 +62,12 @@ export default async function classifyIntent(utterance, kakaoId) {
 
   try {
     const recentHistory = await fetchRecentHistory(kakaoId);
+    const recentFallback = await fetchRecentFallback(kakaoId);
 
     const messages = [
       {
         role: "system",
-        content: `아래는 이전 대화 흐름입니다. 이 흐름을 참고하여 사용자의 발화를 intent와 handler로 분류해주세요:\n\n${recentHistory.join("\n")}`
+        content: `아래는 이전 대화 흐름과 fallback 추천 로그입니다.\n\n🧠 대화 히스토리:\n${recentHistory.join("\n")}\n\n🧠 이전 fallback 로그:\n${recentFallback.join("\n")}`
       },
       {
         role: "user",
