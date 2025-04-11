@@ -1,5 +1,3 @@
-// ✅ webhook.js – 전문가 회원 등록 포함 + 디버깅 로그 + 확장 가능
-
 import express from "express";
 import { supabase } from "../services/supabase.js";
 import classifyIntent from "../handlers/classifyIntent.js";
@@ -22,6 +20,7 @@ import trainerRegisterMember from "../handlers/trainerRegisterMember.js";
 import fallback from "../handlers/fallback.js";
 import recordStrengthRecord from "../handlers/recordStrengthRecord.js";
 import recordPersonalCondition from "../handlers/recordPersonalCondition.js";
+import handleFreeInput from "../handlers/handleFreeInput.js";
 
 const router = express.Router();
 
@@ -31,33 +30,36 @@ const handlerMap = {
   "식단 추천": recommendMeal,
   "내 정보 조회": showUserInfo,
   "회원": registerMember,
-  "개인 운동 시간 조회": showPersonalWorkoutSlots,
-  "개인 운동 예약": reservePersonalWorkout,
-  "개인 운동 예약 취소": cancelPersonalWorkout,
-  "전문가 등록": registerTrainer,
   "회원 등록": trainerRegisterMember,
+  "전문가 등록": registerTrainer,
+  "회원 목록 조회": listMembers,
   "체성분 입력": recordBodyComposition,
   "심박수 입력": recordHeartRate,
   "통증 입력": recordPainReport,
+  "가용 시간 등록": registerAvailability,
   "근력 기록 입력": recordStrengthRecord,
   "특이사항 입력": recordPersonalCondition,
+  "개인 운동 예약": reservePersonalWorkout,
+  "개인 운동 시간 조회": showPersonalWorkoutSlots,
+  "개인 운동 예약 취소": cancelPersonalWorkout,
 };
 
 router.post("/", async (req, res) => {
   const utterance = req.body.userRequest?.utterance;
   const kakaoId = req.body.userRequest?.user?.id;
 
-  console.log("📩 사용자 발화:", utterance);
-  console.log("🧑‍💼 사용자 ID:", kakaoId);
+  console.log("\ud83d\udce9 \uc0ac\uc6a9\uc790 \ubc1c\ud654:", utterance);
+  console.log("\ud83e\uddd1\u200d\ud83d\udcbc \uc0ac\uc6a9\uc790 ID:", kakaoId);
 
   const intent = await classifyIntent(utterance);
-  console.log("[INTENT] 분류 결과:", intent);
+  console.log("[INTENT] \ubd84\ub958 \uacb0\uacfc:", intent);
 
+  // 전문가 등록은 누구나 가능
   if (intent === "전문가 등록") {
-    console.log("✅ 전문가 등록 intent 처리 진입");
     return registerTrainer(kakaoId, utterance, res);
   }
 
+  // 전문가 여부 확인
   const { data: trainer } = await supabase
     .from("trainers")
     .select("id")
@@ -73,10 +75,19 @@ router.post("/", async (req, res) => {
     if (intent === "통증 입력") return recordPainReport(kakaoId, utterance, res);
     if (intent === "가용 시간 등록") return registerAvailability(kakaoId, utterance, res);
     if (intent === "회원 등록") return trainerRegisterMember(kakaoId, utterance, res);
-    if (result.body) await recordBodyComposition(result.name, result.body);
-if (result.pain) await recordPain(result.name, result.pain);
-if (result.notes) await recordSpecialNote(result.name, result.notes);
+    if (intent === "근력 기록 입력") return recordStrengthRecord(kakaoId, utterance, res);
+    if (intent === "특이사항 입력") return recordPersonalCondition(kakaoId, utterance, res);
 
+    // ✅ 자유 입력 (복합 정보 자동 처리)
+    if (intent === "자유 입력") {
+      const result = await handleFreeInput(utterance);
+
+      if (result.body) await recordBodyComposition(result.name, result.body, res);
+      if (result.pain) await recordPainReport(result.name, result.pain, res);
+      if (result.notes) await recordPersonalCondition(result.name, result.notes, res);
+
+      return res.json({ message: `${result.name}님의 정보가 기록되었습니다.` });
+    }
   }
 
   const handler = handlerMap[intent] || fallback;
@@ -84,4 +95,3 @@ if (result.notes) await recordSpecialNote(result.name, result.notes);
 });
 
 export default router;
-

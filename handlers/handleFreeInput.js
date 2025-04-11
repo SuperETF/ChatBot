@@ -1,4 +1,7 @@
-const prompt = `
+import { openai } from "../services/openai.js";
+
+export default async function handleFreeInput(utterance) {
+  const prompt = `
 다음 문장에서 항목별로 필요한 정보를 JSON으로 추출해줘.
 
 ✅ 추출 항목:
@@ -22,10 +25,27 @@ const prompt = `
 → JSON:
 `;
 
-const response = await openai.chat.completions.create({
-  model: "gpt-4",
-  messages: [{ role: "user", content: prompt }],
-  temperature: 0
-});
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0
+    });
 
-const result = JSON.parse(response.choices[0].message.content);
+    const content = response.choices[0].message.content.trim();
+    const result = JSON.parse(content);
+
+    if (!result.name) {
+      throw new Error("회원 이름(name)이 누락되었습니다.");
+    }
+
+    return result;
+  } catch (err) {
+    console.error("❌ handleFreeInput 오류:", err);
+    return {
+      error: true,
+      message: "입력된 문장을 분석하는 데 실패했습니다. 형식을 다시 확인해주세요.",
+      detail: err.message
+    };
+  }
+}

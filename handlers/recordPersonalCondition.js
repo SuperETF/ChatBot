@@ -1,54 +1,51 @@
-// ✅ handlers/recordPersonalCondition.js – 특이사항 입력 핸들러
+import { openai } from "../services/openai.js";
 
-import { supabase } from "../services/supabase.js";
-import { replyText } from "../utils/reply.js";
+export default async function handleFreeInput(utterance) {
+  const prompt = `
+다음 문장에서 항목별로 필요한 정보를 JSON으로 추출해줘.
 
-export default async function recordPersonalCondition(kakaoId, utterance, res) {
-  const nameMatch = utterance.match(/[가-힣]{2,4}/);
-  const noteMatch = utterance.replace(nameMatch?.[0] || "", "").trim();
+✅ 추출 항목:
+- name: 회원 이름 (필수)
+- body: { weight, fat, muscle } (선택)
+- pain: [{ location, score }] (선택)
+- notes: 특이사항 또는 설명 (선택)
 
-  if (!nameMatch || !noteMatch) {
-    return res.json(replyText("특이사항 입력 형식을 확인해주세요.\n예: 김복두 어깨 수술 이력 있음"));
-  }
+예시 문장:
+"김복두 회원님 체중 80이고 체지방 20이고 근육 20이야. 오른쪽 무릎이 통증 7점. 특이사항은 앞쪽 통증."
 
-  const name = nameMatch[0];
-  const note = noteMatch;
-
-  // 전문가 ID 가져오기
-  const { data: trainer } = await supabase
-    .from("trainers")
-    .select("id")
-    .eq("kakao_id", kakaoId)
-    .maybeSingle();
-
-  if (!trainer) {
-    return res.json(replyText("전문가 인증이 되지 않았습니다. 먼저 '전문가 등록'을 완료해주세요."));
-  }
-
-  // 해당 전문가가 등록한 회원 찾기
-  const { data: member } = await supabase
-    .from("members")
-    .select("id")
-    .eq("trainer_id", trainer.id)
-    .eq("name", name)
-    .maybeSingle();
-
-  if (!member) {
-    return res.json(replyText("해당 회원을 찾을 수 없습니다."));
-  }
-
-  const { error } = await supabase
-    .from("personal_conditions")
-    .insert({
-      member_id: member.id,
-      note
-    });
-
-  if (error) {
-    console.error("❌ 특이사항 저장 실패:", error);
-    return res.json(replyText("특이사항 저장 중 오류가 발생했습니다."));
-  }
-
-  return res.json(replyText(`✅ ${name} 회원의 특이사항이 저장되었습니다.`));
+예시 출력:
+{
+  "name": "김복두",
+  "body": { "weight": 80, "fat": 20, "muscle": 20 },
+  "pain": [{ "location": "오른쪽 무릎", "score": 7 }],
+  "notes": "앞쪽 통증"
 }
 
+문장: "${utterance}"
+→ JSON:
+`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0
+    });
+
+    const content = response.choices[0].message.content.trim();
+    const result = JSON.parse(content);
+
+    if (!result.name) {
+      throw new Error("회원 이름(name)이 누락되었습니다.");
+    }
+
+    return result;
+  } catch (err) {
+    console.error("❌ handleFreeInput 오류:", err);
+    return {
+      error: true,
+      message: "입력된 문장을 분석하는 데 실패했습니다. 형식을 다시 확인해주세요.",
+      detail: err.message
+    };
+  }
+}

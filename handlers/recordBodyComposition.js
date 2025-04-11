@@ -1,24 +1,31 @@
-// ✅ handlers/recordBodyComposition.js
-
 import { supabase } from "../services/supabase.js";
 import { replyText } from "../utils/reply.js";
 
-export default async function recordBodyComposition(kakaoId, utterance, res) {
-  const nameMatch = utterance.match(/[가-힣]{2,4}/);
-  const weightMatch = utterance.match(/체중\s?(\d{2,3})/);
-  const fatMatch = utterance.match(/체지방\s?(\d{1,2})/);
-  const muscleMatch = utterance.match(/근육\s?(\d{2,3})/);
+export default async function recordBodyComposition(kakaoIdOrName, dataOrUtterance, res) {
+  let name, weight, body_fat, muscle_mass;
 
-  if (!nameMatch || !weightMatch || !fatMatch || !muscleMatch) {
-    return res.json(replyText(
-      "입력 형식을 확인해주세요. 예: 김복두 체중 75 체지방 23 근육 30"
-    ));
+  // 자유입력: kakaoIdOrName === 이름, dataOrUtterance === { weight, fat, muscle }
+  if (typeof dataOrUtterance === "object") {
+    name = kakaoIdOrName;
+    weight = dataOrUtterance.weight;
+    body_fat = dataOrUtterance.fat;
+    muscle_mass = dataOrUtterance.muscle;
+  } else {
+    const utterance = dataOrUtterance;
+    const nameMatch = utterance.match(/[가-힣]{2,4}/);
+    const weightMatch = utterance.match(/체중\s?(\d{2,3})/);
+    const fatMatch = utterance.match(/체지방\s?(\d{1,2})/);
+    const muscleMatch = utterance.match(/근육\s?(\d{2,3})/);
+
+    if (!nameMatch || !weightMatch || !fatMatch || !muscleMatch) {
+      return res.json(replyText("입력 형식을 확인해주세요. 예: 김복두 체중 75 체지방 23 근육 30"));
+    }
+
+    name = nameMatch[0];
+    weight = Number(weightMatch[1]);
+    body_fat = Number(fatMatch[1]);
+    muscle_mass = Number(muscleMatch[1]);
   }
-
-  const name = nameMatch[0];
-  const weight = Number(weightMatch[1]);
-  const body_fat = Number(fatMatch[1]);
-  const muscle_mass = Number(muscleMatch[1]);
 
   const { data: member } = await supabase
     .from("members")
