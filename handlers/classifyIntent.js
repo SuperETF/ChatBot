@@ -4,9 +4,17 @@ import { openai } from "../services/openai.js";
 
 export default async function classifyIntent(utterance) {
   // ✅ 직접 분기 처리: 우선순위 높은 고정 패턴은 여기서 처리
-  if (utterance.startsWith("전문가")) return "전문가 등록";
-  if (utterance.startsWith("회원 등록")) return "회원 등록";
-  if (utterance.startsWith("회원")) return "회원";
+  const cleanUtterance = utterance.normalize("NFKC").trim().toLowerCase();
+
+if (cleanUtterance.startsWith("전문가")) return "전문가 등록";
+if (cleanUtterance.startsWith("회원 등록")) return "전문가 회원 등록";
+if (cleanUtterance.startsWith("회원")) return "회원 등록";
+
+  if (utterance.match(/체중|체지방|근육/)) return "체성분 입력";
+if (utterance.match(/최대심박|안정시|심박수/)) return "심박수 입력";
+if (utterance.match(/아파|통증|불편/)) return "통증 입력";
+if (utterance.match(/스쿼트|벤치|데드리프트/)) return "근력 기록 입력";
+if (utterance.match(/이력|주의사항|특이사항/)) return "특이사항 입력";
 
   // ✅ GPT 보조 분기 처리
   const prompt = `

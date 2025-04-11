@@ -8,7 +8,7 @@ export default async function registerMember(kakaoId, utterance, res) {
   const phoneMatch = utterance.match(/(01[016789][0-9]{7,8})/);
 
   if (!nameMatch || !phoneMatch) {
-    return res.json(replyText(`성함과 전화번호를 함께 입력해주세요.\n예: 회원 홍길동 01012345678`));
+    return res.json(replyText(`성함과 전화번호를 함께 입력해주세요.\n예: 홍길동 01012345678`));
   }
 
   const name = nameMatch[0];
