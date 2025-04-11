@@ -1,6 +1,20 @@
 import { openai } from "../services/openai.js";
 
-export default async function classifyIntent(utterance) {
+const YES_KEYWORDS = ["네", "그래", "응", "좋아", "알겠어"];
+const sessionContext = {};
+
+export default async function classifyIntent(utterance, kakaoId) {
+  const cleanUtterance = utterance.normalize("NFKC").trim();
+
+  // ✅ 긍정 응답일 경우: 이전 intent 재사용
+  if (YES_KEYWORDS.includes(cleanUtterance)) {
+    const last = sessionContext[kakaoId];
+    if (last?.handler) {
+      console.log("↪️ 긍정 응답 → 이전 intent 재사용:", last.intent);
+      return { intent: last.intent, handler: last.handler };
+    }
+  }
+
   const prompt = `
 다음 사용자 발화를 intent와 handler로 분류해줘.
 
@@ -25,14 +39,22 @@ export default async function classifyIntent(utterance) {
 문장: "${utterance}"
 `;
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4",
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0
-  });
-
   try {
-    return JSON.parse(response.choices[0].message.content.trim());
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0
+    });
+
+    const result = JSON.parse(response.choices[0].message.content.trim());
+
+    // ✅ 다음 요청을 위해 sessionContext에 저장
+    sessionContext[kakaoId] = {
+      intent: result.intent,
+      handler: result.handler
+    };
+
+    return result;
   } catch (e) {
     return { intent: "기타", handler: "fallback" };
   }

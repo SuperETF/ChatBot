@@ -1,7 +1,6 @@
 import express from "express";
 import { supabase } from "../services/supabase.js";
 import classifyIntent from "../handlers/classifyIntent.js";
-
 import reserveWorkout from "../handlers/reserveWorkout.js";
 import recommendRoutine from "../handlers/recommendRoutine.js";
 import showUserInfo from "../handlers/showUserInfo.js";
@@ -48,18 +47,16 @@ router.post("/", async (req, res) => {
   const utterance = req.body.userRequest?.utterance;
   const kakaoId = req.body.userRequest?.user?.id;
 
-  console.log("\ud83d\udce9 \uc0ac\uc6a9\uc790 \ubc1c\ud654:", utterance);
-  console.log("\ud83e\uddd1\u200d\ud83d\udcbc \uc0ac\uc6a9\uc790 ID:", kakaoId);
+  console.log("\ud83d\udce9 사용자 발화:", utterance);
+  console.log("\ud83e\uddd1\u200d\ud83d\udcbc 사용자 ID:", kakaoId);
 
-  const intent = await classifyIntent(utterance);
-  console.log("[INTENT] \ubd84\ub958 \uacb0\uacfc:", intent);
+  const { intent, handler } = await classifyIntent(utterance, kakaoId);
+  console.log("[INTENT] 분류 결과:", intent);
 
-  // 전문가 등록은 누구나 가능
   if (intent === "전문가 등록") {
     return registerTrainer(kakaoId, utterance, res);
   }
 
-  // 전문가 여부 확인
   const { data: trainer } = await supabase
     .from("trainers")
     .select("id")
@@ -78,20 +75,17 @@ router.post("/", async (req, res) => {
     if (intent === "근력 기록 입력") return recordStrengthRecord(kakaoId, utterance, res);
     if (intent === "특이사항 입력") return recordPersonalCondition(kakaoId, utterance, res);
 
-    // ✅ 자유 입력 (복합 정보 자동 처리)
     if (intent === "자유 입력") {
       const result = await handleFreeInput(utterance);
-
       if (result.body) await recordBodyComposition(result.name, result.body, res);
       if (result.pain) await recordPainReport(result.name, result.pain, res);
       if (result.notes) await recordPersonalCondition(result.name, result.notes, res);
-
       return res.json({ message: `${result.name}님의 정보가 기록되었습니다.` });
     }
   }
 
-  const handler = handlerMap[intent] || fallback;
-  return handler(kakaoId, utterance, res);
+  const fallbackHandler = handlerMap[intent] || fallback;
+  return fallbackHandler(kakaoId, utterance, res);
 });
 
 export default router;
