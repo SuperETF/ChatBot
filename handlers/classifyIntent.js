@@ -83,6 +83,20 @@ export default async function classifyIntent(utterance, kakaoId) {
 
     const result = JSON.parse(response.choices[0].message.content.trim());
 
+    // ✅ 전문가 여부 확인하여 핸들러 재설정 (회원 등록 시에만)
+    if (result.intent === "회원 등록") {
+      const { data: trainer } = await supabase
+        .from("trainers")
+        .select("id")
+        .eq("kakao_id", kakaoId)
+        .maybeSingle();
+
+      if (trainer) {
+        result.handler = "trainerRegisterMember";
+        console.log("👨‍🏫 전문가로 감지됨 → 핸들러 변경: trainerRegisterMember");
+      }
+    }
+
     sessionContext[kakaoId] = {
       intent: result.intent,
       handler: result.handler
