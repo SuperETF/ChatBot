@@ -27,6 +27,11 @@ export default async function classifyIntent(utterance) {
   if (utterance.match(/개인 운동 예약/)) return "개인 운동 예약";
   if (utterance.match(/취소.*\d{1,2}시/)) return "개인 운동 예약 취소";
   if (utterance.match(/내 정보/)) return "내 정보 조회";
+  if (utterance.match(/회원.*통계|회원 수|등록 현황|요약/)) return "회원 통계 조회";
+  if (utterance.match(/체중|체지방|근육|통증|강도|점|특이사항|무릎|어깨/)) {
+    return "자유 입력";
+  }
+  
 
   // ✅ GPT 보조 분류
   const prompt = `
@@ -67,11 +72,30 @@ export default async function classifyIntent(utterance) {
 답변:
 `;
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-3.5-turbo",
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0
-  });
+const response = await openai.chat.completions.create({
+  model: "gpt-4",
+  messages: [{ role: "user", content: prompt }],
+  temperature: 0,
+
+  // ✅ 여기에 function 등록
+  functions: [
+    {
+      name: "queryMemberStats",
+      description: "회원 관련 통계를 조회합니다.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "Supabase SQL 형식의 쿼리"
+          }
+        },
+        required: ["query"]
+      }
+    }
+  ],
+  function_call: "auto"
+});
 
   return response.choices[0].message.content.trim();
 }

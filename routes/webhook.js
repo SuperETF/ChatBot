@@ -73,6 +73,10 @@ router.post("/", async (req, res) => {
     if (intent === "통증 입력") return recordPainReport(kakaoId, utterance, res);
     if (intent === "가용 시간 등록") return registerAvailability(kakaoId, utterance, res);
     if (intent === "회원 등록") return trainerRegisterMember(kakaoId, utterance, res);
+    if (result.body) await recordBodyComposition(result.name, result.body);
+if (result.pain) await recordPain(result.name, result.pain);
+if (result.notes) await recordSpecialNote(result.name, result.notes);
+
   }
 
   const handler = handlerMap[intent] || fallback;
