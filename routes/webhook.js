@@ -62,16 +62,14 @@ router.post("/", async (req, res) => {
     return res.json(replyText("진행을 취소했어요. 언제든지 다시 시작하실 수 있어요."));
   }
 
-  // ✅ 등록 확인 버튼 클릭 처리 (단일/멀티턴 공통)
   if (["등록", "등록할게"].includes(utterance)) {
     const ctx = sessionContext[kakaoId];
     if (ctx?.intent === "회원 등록" && ctx?.data?.name && ctx?.data?.phone) {
       sessionContext[kakaoId] = null;
-      return trainerRegisterMember(kakaoId, `${ctx.data.name} ${ctx.data.phone}`, res);
+      return trainerRegisterMember(kakaoId, `회원 등록 ${ctx.data.name} ${ctx.data.phone}`, res);
     }
   }
 
-  // ✅ 멀티턴 처리 흐름
   if (ctx?.intent === "회원 등록") {
     if (ctx.step === "askName") {
       ctx.data.name = utterance;
@@ -92,18 +90,16 @@ router.post("/", async (req, res) => {
     }
   }
 
-  // ✅ intent 분류
   const { intent, handler } = await classifyIntent(utterance, kakaoId);
   console.log("[INTENT] 분류 결과:", intent);
 
-  // ✅ 단일 문장: 이름 + 번호 함께 입력된 경우
   if (intent === "회원 등록" && handler === "trainerRegisterMember") {
-    const nameMatch = utterance.match(/[가-힣]{2,4}/);
-    const phoneMatch = utterance.match(/(01[016789][0-9]{7,8})/);
+    const clean = utterance.replace(/^회원 등록\s*/, "").trim();
+    const namePhoneMatch = clean.match(/([가-힣]{2,4})\s+(01[016789][0-9]{7,8})/);
 
-    if (nameMatch && phoneMatch) {
-      const name = nameMatch[0];
-      const phone = phoneMatch[0];
+    if (namePhoneMatch) {
+      const name = namePhoneMatch[1];
+      const phone = namePhoneMatch[2];
       sessionContext[kakaoId] = {
         intent,
         handler,
@@ -117,7 +113,6 @@ router.post("/", async (req, res) => {
       ));
     }
 
-    // 멀티턴 시작 (이름부터)
     sessionContext[kakaoId] = {
       intent,
       handler,
@@ -128,7 +123,6 @@ router.post("/", async (req, res) => {
     return res.json(replyText("회원님의 성함을 알려주세요."));
   }
 
-  // 🧠 전문가 여부 확인 후 intent 분기
   const { data: trainer } = await supabase
     .from("trainers")
     .select("id")
@@ -148,7 +142,6 @@ router.post("/", async (req, res) => {
     if (intent === "특이사항 입력") return recordPersonalCondition(kakaoId, utterance, res);
   }
 
-  // 👤 일반 회원 intent 분기
   const handlerFunc = {
     "운동 예약": reserveWorkout,
     "루틴 추천": recommendRoutine,
