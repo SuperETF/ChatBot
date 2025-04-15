@@ -16,21 +16,20 @@ export default async function trainerRegisterMember(kakaoId, utterance, res) {
 
   // ✅ '회원 등록' prefix 제거 후 이름/전화번호 추출
   const clean = utterance.replace(/^회원 등록\s*/, "").trim();
-  const nameMatch = clean.match(/[가-힣]{2,4}/);
-  const phoneMatch = clean.match(/(01[016789][0-9]{7,8})/);
+  const namePhoneMatch = clean.match(/([가-힣]{2,4})\s+(01[016789][0-9]{7,8})/);
 
-  if (!nameMatch || !phoneMatch) {
-    return res.json(replyText("회원 성함과 전화번호를 함께 입력해주세요. 예: 김복두 01012345678"));
+  if (!namePhoneMatch) {
+    return res.json(replyText("회원님의 성함과 전화번호를 정확히 입력해주세요. 예: 김복두 01012345678"));
   }
 
-  const name = nameMatch[0];
-  const phone = phoneMatch[0];
+  const name = namePhoneMatch[1];
+  const phone = namePhoneMatch[2];
 
   console.log("✅ 이름:", name);
   console.log("📞 전화번호:", phone);
   console.log("🧑‍🏫 kakao_id:", kakaoId);
 
-  // ✅ 이미 등록된 회원인지 확인
+  // ✅ 중복 등록 방지
   const { data: existing } = await supabase
     .from("members")
     .select("id")
@@ -42,7 +41,7 @@ export default async function trainerRegisterMember(kakaoId, utterance, res) {
     return res.json(replyText(`${name}님은 이미 등록되어 있습니다.`));
   }
 
-  // ✅ 새 회원 insert (trainer_id 포함, kakao_id는 null)
+  // ✅ Supabase에 insert (trainer_id 포함, kakao_id는 null)
   const { error: insertError } = await supabase
     .from("members")
     .insert({
