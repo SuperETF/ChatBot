@@ -2,6 +2,7 @@ import express from "express";
 import { supabase } from "../services/supabase.js";
 import classifyIntent from "../handlers/classifyIntent.js";
 
+// 핸들러
 import reserveWorkout from "../handlers/reserveWorkout.js";
 import recommendRoutine from "../handlers/recommendRoutine.js";
 import showUserInfo from "../handlers/showUserInfo.js";
@@ -21,12 +22,14 @@ import fallback from "../handlers/fallback.js";
 import recordStrengthRecord from "../handlers/recordStrengthRecord.js";
 import recordPersonalCondition from "../handlers/recordPersonalCondition.js";
 import handleFreeInput from "../handlers/handleFreeInput.js";
-import { replyText } from "../utils/reply.js";
+
+// 유틸
+import { replyText, replyButton } from "../utils/reply.js";
 import { logMultiTurnStep } from "../utils/log.js";
 
 const router = express.Router();
 const sessionContext = {};
-const SESSION_TTL_MS = 2 * 60 * 1000; // 2분
+const SESSION_TTL_MS = 2 * 60 * 1000;
 
 function parseBodyFromUtterance(text) {
   const weight = text.match(/체중\s?(\d{2,3})/);
@@ -42,30 +45,9 @@ function parseBodyFromUtterance(text) {
   return null;
 }
 
-const handlerMap = {
-  "운동 예약": reserveWorkout,
-  "루틴 추천": recommendRoutine,
-  "식단 추천": recommendMeal,
-  "내 정보 조회": showUserInfo,
-  "회원": registerMember,
-  "회원 등록": trainerRegisterMember,
-  "전문가 등록": registerTrainer,
-  "회원 목록 조회": listMembers,
-  "체성분 입력": recordBodyComposition,
-  "심박수 입력": recordHeartRate,
-  "통증 입력": recordPainReport,
-  "가용 시간 등록": registerAvailability,
-  "근력 기록 입력": recordStrengthRecord,
-  "특이사항 입력": recordPersonalCondition,
-  "개인 운동 예약": reservePersonalWorkout,
-  "개인 운동 시간 조회": showPersonalWorkoutSlots,
-  "개인 운동 예약 취소": cancelPersonalWorkout,
-};
-
 router.post("/", async (req, res) => {
-  const utterance = req.body.userRequest?.utterance;
+  const utterance = req.body.userRequest?.utterance.trim();
   const kakaoId = req.body.userRequest?.user?.id;
-
   console.log("📩 사용자 발화:", utterance);
   console.log("👤 사용자 ID:", kakaoId);
 
@@ -75,11 +57,21 @@ router.post("/", async (req, res) => {
     sessionContext[kakaoId] = null;
   }
 
-  if (["안 할래", "취소", "그만", "등록 안 해"].includes(utterance.trim())) {
+  if (["안 할래", "취소", "그만", "등록 안 해"].includes(utterance)) {
     sessionContext[kakaoId] = null;
     return res.json(replyText("진행을 취소했어요. 언제든지 다시 시작하실 수 있어요."));
   }
 
+  // ✅ 등록 확인 버튼 클릭 처리 (단일/멀티턴 공통)
+  if (["등록", "등록할게"].includes(utterance)) {
+    const ctx = sessionContext[kakaoId];
+    if (ctx?.intent === "회원 등록" && ctx?.data?.name && ctx?.data?.phone) {
+      sessionContext[kakaoId] = null;
+      return trainerRegisterMember(kakaoId, `${ctx.data.name} ${ctx.data.phone}`, res);
+    }
+  }
+
+  // ✅ 멀티턴 처리 흐름
   if (ctx?.intent === "회원 등록") {
     if (ctx.step === "askName") {
       ctx.data.name = utterance;
@@ -90,49 +82,42 @@ router.post("/", async (req, res) => {
     }
     if (ctx.step === "askPhone") {
       ctx.data.phone = utterance;
-      const { name, phone } = ctx.data;
-      await logMultiTurnStep({ kakaoId, intent: ctx.intent, step: "askPhone", utterance });
-      sessionContext[kakaoId] = null;
-      return registerMember(kakaoId, `${name} ${phone}`, res);
-    }
-  }
-
-  if (ctx?.intent === "전문가 등록") {
-    if (ctx.step === "askName") {
-      ctx.data.name = utterance;
-      ctx.step = "askPhone";
+      ctx.step = "confirmRegister";
       ctx.timestamp = Date.now();
-      await logMultiTurnStep({ kakaoId, intent: ctx.intent, step: "askName", utterance });
-      return res.json(replyText("전화번호도 입력해주세요."));
-    }
-    if (ctx.step === "askPhone") {
-      ctx.data.phone = utterance;
-      const { name, phone } = ctx.data;
       await logMultiTurnStep({ kakaoId, intent: ctx.intent, step: "askPhone", utterance });
-      sessionContext[kakaoId] = null;
-      return registerTrainer(kakaoId, `${name} ${phone}`, res);
+      return res.json(replyButton(
+        `${ctx.data.name}님(${ctx.data.phone})을 등록하시겠습니까?`,
+        ["등록"]
+      ));
     }
   }
 
-  if (ctx?.intent === "자유 입력" && ctx.step === "askBody") {
-    const bodyParsed = parseBodyFromUtterance(utterance);
-    if (bodyParsed) {
-      ctx.data.body = bodyParsed;
-      await logMultiTurnStep({ kakaoId, intent: ctx.intent, step: "askBody", utterance });
-      await recordBodyComposition(ctx.data.name, ctx.data.body, res);
-      if (ctx.data.pain) await recordPainReport(ctx.data.name, ctx.data.pain, res);
-      if (ctx.data.notes) await recordPersonalCondition(ctx.data.name, ctx.data.notes, res);
-      sessionContext[kakaoId] = null;
-      return res.json(replyText(`${ctx.data.name}님의 모든 정보가 기록되었습니다.`));
-    } else {
-      return res.json(replyText("체중, 체지방, 근육량을 숫자로 입력해주세요. 예: 체중 70 체지방 20 근육 30"));
-    }
-  }
-
+  // ✅ intent 분류
   const { intent, handler } = await classifyIntent(utterance, kakaoId);
   console.log("[INTENT] 분류 결과:", intent);
 
-  if (intent === "회원 등록") {
+  // ✅ 단일 문장: 이름 + 번호 함께 입력된 경우
+  if (intent === "회원 등록" && handler === "trainerRegisterMember") {
+    const nameMatch = utterance.match(/[가-힣]{2,4}/);
+    const phoneMatch = utterance.match(/(01[016789][0-9]{7,8})/);
+
+    if (nameMatch && phoneMatch) {
+      const name = nameMatch[0];
+      const phone = phoneMatch[0];
+      sessionContext[kakaoId] = {
+        intent,
+        handler,
+        data: { name, phone },
+        step: "confirmRegister",
+        timestamp: Date.now()
+      };
+      return res.json(replyButton(
+        `${name}님(${phone})을 등록하시겠습니까?`,
+        ["등록"]
+      ));
+    }
+
+    // 멀티턴 시작 (이름부터)
     sessionContext[kakaoId] = {
       intent,
       handler,
@@ -143,36 +128,7 @@ router.post("/", async (req, res) => {
     return res.json(replyText("회원님의 성함을 알려주세요."));
   }
 
-  if (intent === "전문가 등록") {
-    sessionContext[kakaoId] = {
-      intent,
-      handler,
-      step: "askName",
-      data: {},
-      timestamp: Date.now()
-    };
-    return res.json(replyText("전문가님의 성함을 알려주세요."));
-  }
-
-  if (intent === "자유 입력") {
-    const result = await handleFreeInput(utterance);
-    if (!result.name) return res.json(replyText("이름을 인식하지 못했어요. 다시 입력해주세요."));
-    if (!result.body) {
-      sessionContext[kakaoId] = {
-        intent,
-        handler,
-        step: "askBody",
-        data: { ...result },
-        timestamp: Date.now()
-      };
-      return res.json(replyText(`${result.name}님의 체중, 체지방, 근육량도 알려주세요.`));
-    }
-    if (result.body) await recordBodyComposition(result.name, result.body, res);
-    if (result.pain) await recordPainReport(result.name, result.pain, res);
-    if (result.notes) await recordPersonalCondition(result.name, result.notes, res);
-    return res.json(replyText(`${result.name}님의 정보가 기록되었습니다.`));
-  }
-
+  // 🧠 전문가 여부 확인 후 intent 분기
   const { data: trainer } = await supabase
     .from("trainers")
     .select("id")
@@ -192,8 +148,26 @@ router.post("/", async (req, res) => {
     if (intent === "특이사항 입력") return recordPersonalCondition(kakaoId, utterance, res);
   }
 
-  const fallbackHandler = handlerMap[intent] || fallback;
-  return fallbackHandler(kakaoId, utterance, res);
+  // 👤 일반 회원 intent 분기
+  const handlerFunc = {
+    "운동 예약": reserveWorkout,
+    "루틴 추천": recommendRoutine,
+    "식단 추천": recommendMeal,
+    "내 정보 조회": showUserInfo,
+    "전문가 등록": registerTrainer,
+    "회원 등록": registerMember,
+    "심박수 입력": recordHeartRate,
+    "자유 입력": handleFreeInput,
+    "개인 운동 예약": reservePersonalWorkout,
+    "개인 운동 시간 조회": showPersonalWorkoutSlots,
+    "개인 운동 예약 취소": cancelPersonalWorkout
+  }[intent];
+
+  if (handlerFunc) {
+    return handlerFunc(kakaoId, utterance, res);
+  }
+
+  return fallback(utterance, kakaoId, res);
 });
 
 export default router;
