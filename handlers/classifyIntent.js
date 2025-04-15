@@ -1,4 +1,5 @@
 import { openai } from "../services/openai.js";
+import { supabase } from "../services/supabase.js"; // ✅ 누락된 import
 import { fetchRecentHistory } from "../utils/fetchHistoryForRAG.js";
 import { fetchRecentFallback } from "../utils/fetchRecentFallback.js";
 
@@ -9,12 +10,14 @@ const sessionContext = {};
 export default async function classifyIntent(utterance, kakaoId) {
   const cleanUtterance = utterance.normalize("NFKC").trim();
 
+  // 🔸 1. 부정 응답
   if (NO_KEYWORDS.includes(cleanUtterance)) {
     console.log("🛑 부정 응답 → 컨텍스트 초기화");
     sessionContext[kakaoId] = null;
     return { intent: "기타", handler: "fallback" };
   }
 
+  // 🔸 2. 긍정 응답 → 직전 intent 이어서 진행
   if (YES_KEYWORDS.includes(cleanUtterance)) {
     const last = sessionContext[kakaoId];
     if (last?.handler) {
@@ -23,6 +26,7 @@ export default async function classifyIntent(utterance, kakaoId) {
     }
   }
 
+  // 🔸 3. '등록'으로 시작하는 응답 → 직전 intent 복원
   if (cleanUtterance === "등록" || cleanUtterance.match(/^등록.*$/)) {
     const last = sessionContext[kakaoId];
     if (last?.handler) {
@@ -32,10 +36,29 @@ export default async function classifyIntent(utterance, kakaoId) {
     return { intent: "기타", handler: "fallback" };
   }
 
-  const prompt = `
-다음 사용자 발화를 intent와 handler로 분류해줘.
+  // 🔸 4. 패턴 기반 룰 매칭 우선 처리
+  if (/^회원 등록\s[가-힣]+\s01[0-9]{7,8}$/.test(cleanUtterance)) {
+    console.log("📌 rule-match: 회원 등록");
+    return { intent: "회원 등록", handler: "trainerRegisterMember" };
+  }
 
-지원 기능:
+  if (/^회원\s[가-힣]+\s01[0-9]{7,8}$/.test(cleanUtterance)) {
+    console.log("📌 rule-match: 일반 회원 등록");
+    return { intent: "회원 등록", handler: "registerMember" };
+  }
+
+  if (/^전문가\s[가-힣]+\s01[0-9]{7,8}$/.test(cleanUtterance)) {
+    console.log("📌 rule-match: 전문가 등록");
+    return { intent: "전문가 등록", handler: "registerTrainer" };
+  }
+
+  // 🔸 5. GPT 분류
+  const prompt = `
+아래는 사용자의 발화입니다:
+"${utterance}"
+
+다음 intent와 handler 중 하나로 정확히 분류해주세요:
+
 - 운동 예약 → bookWorkout
 - 루틴 추천 → recommendRoutine
 - 식단 추천 → recommendDiet
@@ -47,17 +70,15 @@ export default async function classifyIntent(utterance, kakaoId) {
 - 자유 입력 → handleFreeInput
 - 기타 → fallback
 
-❗️주의사항:
-- 사용자가 '등록할게', '진행해', '그래'라고 말한 경우, 반드시 직전 질문의 intent를 유지하세요.
-- '등록'이라는 단어만 보고 '회원 등록'으로 착각하지 마세요.
+✅ 예시1: "회원 등록 이지은 01012345678" → intent: 회원 등록, handler: trainerRegisterMember
+✅ 예시2: "전문가 김철수 01023456789" → intent: 전문가 등록, handler: registerTrainer
+✅ 예시3: "회원 박민지 01099887766" → intent: 회원 등록, handler: registerMember
 
 반환 형식(JSON):
 {
   "intent": "통증 입력",
   "handler": "recordPain"
 }
-
-문장: "${utterance}"
 `;
 
   try {
@@ -67,7 +88,7 @@ export default async function classifyIntent(utterance, kakaoId) {
     const messages = [
       {
         role: "system",
-        content: `아래는 이전 대화 흐름과 fallback 추천 로그입니다.\n\n🧠 대화 히스토리:\n${recentHistory.join("\n")}\n\n🧠 이전 fallback 로그:\n${recentFallback.join("\n")}`
+        content: `🧠 이전 대화:\n${recentHistory.join("\n")}\n\n🔁 fallback 로그:\n${recentFallback.join("\n")}`
       },
       {
         role: "user",
@@ -83,7 +104,7 @@ export default async function classifyIntent(utterance, kakaoId) {
 
     const result = JSON.parse(response.choices[0].message.content.trim());
 
-    // ✅ 전문가 여부 확인하여 핸들러 재설정 (회원 등록 시에만)
+    // ✅ 전문가 여부 확인 후 handler 전환
     if (result.intent === "회원 등록") {
       const { data: trainer } = await supabase
         .from("trainers")
@@ -104,7 +125,7 @@ export default async function classifyIntent(utterance, kakaoId) {
 
     return result;
   } catch (e) {
-    console.warn("⚠️ GPT 분류 실패, fallback 으로 전환");
+    console.warn("⚠️ GPT 분류 실패, fallback 으로 전환", e);
     sessionContext[kakaoId] = null;
     return { intent: "기타", handler: "fallback" };
   }
