@@ -1,7 +1,7 @@
 // ✅ listMembers.js – 전문가 ID 기준 필터링 추가
 
-import { supabase } from "../services/supabase.js";
-import { replyText } from "../utils/reply.js";
+import { supabase } from "../../services/supabase.js";
+import { replyText } from "../../utils/reply.js";
 
 export default async function listMembers(kakaoId, utterance, res) {
   // 전문가 ID 확인
