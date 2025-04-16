@@ -80,10 +80,10 @@ export default async function classifyIntent(utterance, kakaoId) {
     return { intent: "운동 예약", handler: "booking", action: "showTrainerSlots" };
   }
 
-  if (/^[가-힣]{2,10},.*(스쿼트|팔굽혀펴기|런지|운동|과제)/.test(clean)) {
+  if (/^[가-힣]{2,10}(,|\\s).*(스쿼트|런지|팔굽혀펴기|과제|운동)/.test(clean)) {
     return { intent: "과제 등록", handler: "assignment", action: "assignWorkout" };
   }
-
+  
   if (clean === "시작하기") {
     return { intent: "운동 시작", handler: "workout", action: "startWorkout" };
   }
