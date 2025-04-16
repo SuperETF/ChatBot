@@ -74,10 +74,14 @@ export default async function assignWorkout(kakaoId, utterance, res) {
     .select()
     .single();
 
-  if (error) {
-    console.error("과제 저장 실패:", error);
-    return res.json(replyText("과제 저장 중 문제가 발생했습니다."));
-  }
+    if (error) {
+      console.error("❌ assignWorkout insert 실패");
+      console.error("📦 payload:", { title, trainer_id: trainer.id, member_id: member.id });
+      console.error("🧨 Supabase error:", error);
+    
+      return res.json(replyText("과제 저장 중 문제가 발생했습니다."));
+    }
+    
 
   for (const date of dates) {
     await supabase.from("assignment_schedules").insert({

@@ -1,3 +1,4 @@
+// webhook.mjs
 import express from "express";
 import { handlers } from "../handlers/index.mjs";
 import classifyIntent from "../handlers/system/classifyIntent.mjs";
@@ -18,19 +19,27 @@ router.post("/", async (req, res) => {
   console.log("👤 사용자 ID:", kakaoId);
 
   try {
-    // 세션 만료 처리
     const ctx = sessionContext[kakaoId];
     if (ctx && Date.now() - ctx.timestamp > SESSION_TTL_MS) {
       sessionContext[kakaoId] = null;
     }
 
-    // 사용자 진행 중단 발화
     if (["안 할래", "취소", "그만", "등록 안 해"].includes(utterance)) {
       sessionContext[kakaoId] = null;
       return res.json(replyText("진행을 취소했어요. 언제든지 다시 시작하실 수 있어요."));
     }
 
-    // 멀티턴 등록 최종 확인
+    // 🆕 회원 등록 멀티턴 진입 처리
+    if (utterance === "회원 등록") {
+      sessionContext[kakaoId] = {
+        intent: "회원 등록",
+        step: "askName",
+        data: {},
+        timestamp: Date.now()
+      };
+      return res.json(replyText("회원님의 성함을 입력해주세요."));
+    }
+
     if (["등록", "등록할게"].includes(utterance)) {
       const ctx = sessionContext[kakaoId];
       if (ctx?.intent === "회원 등록" && ctx?.data?.name && ctx?.data?.phone) {
@@ -39,7 +48,6 @@ router.post("/", async (req, res) => {
       }
     }
 
-    // 멀티턴 흐름 처리
     if (ctx?.intent === "회원 등록") {
       if (ctx.step === "askName") {
         ctx.data.name = utterance;
@@ -61,21 +69,17 @@ router.post("/", async (req, res) => {
       }
     }
 
-    // 의도 분류
     const { intent, handler, action } = await classifyIntent(utterance, kakaoId);
     console.log("🎯 INTENT 결과:", { intent, handler, action });
 
-    // 핸들러 실행
     if (handlers[handler]) {
       return await handlers[handler](kakaoId, utterance, res, action);
     }
 
-    // fallback 분기
     return fallback(utterance, kakaoId, res);
   } catch (error) {
     console.error("💥 webhook 처리 중 오류 발생:", error);
 
-    // fallback 로그 저장
     await supabase.from("fallback_logs").insert({
       kakao_id: kakaoId,
       utterance,
