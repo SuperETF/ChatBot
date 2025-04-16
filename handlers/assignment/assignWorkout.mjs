@@ -1,34 +1,9 @@
 import { supabase } from "../../services/supabase.mjs";
 import { replyText } from "../../utils/reply.mjs";
-
-function extractDatesFromText(text) {
-  const today = new Date();
-  const dates = [];
-
-  if (/내일/.test(text)) {
-    const d = new Date(today);
-    d.setDate(d.getDate() + 1);
-    dates.push(d);
-  }
-
-  if (/격일/.test(text)) {
-    for (let i = 0; i < 7; i += 2) {
-      const d = new Date(today);
-      d.setDate(d.getDate() + i);
-      dates.push(d);
-    }
-  }
-
-  const manualDates = [...text.matchAll(/(\d{1,2})월\s?(\d{1,2})일/g)];
-  for (const match of manualDates) {
-    const d = new Date();
-    d.setMonth(parseInt(match[1]) - 1);
-    d.setDate(parseInt(match[2]));
-    dates.push(d);
-  }
-
-  return dates;
-}
+import {
+  parseDateTimeFromText,
+  parseDateRangeFromText
+} from "../../utils/parseDateUtils.mjs";
 
 export default async function assignWorkout(kakaoId, utterance, res) {
   const { data: trainer } = await supabase
@@ -60,7 +35,10 @@ export default async function assignWorkout(kakaoId, utterance, res) {
     return res.json(replyText(`${name}님은 당신의 회원이 아니거나 존재하지 않습니다.`));
   }
 
-  const dates = extractDatesFromText(utterance);
+  // 🔍 자연어 날짜 추출
+  const rangeDates = parseDateRangeFromText(utterance);
+  const singleDates = parseDateTimeFromText(utterance);
+  const scheduleDates = rangeDates.length > 0 ? rangeDates : singleDates;
 
   const { data: assignment, error } = await supabase
     .from("personal_assignments")
@@ -73,22 +51,20 @@ export default async function assignWorkout(kakaoId, utterance, res) {
     .select()
     .single();
 
-  if (error || !assignment || !assignment.id) {
-    console.error("❌ assignWorkout insert 실패");
-    console.error("📦 payload:", { title, trainer_id: trainer.id, member_id: member.id });
-    console.error("🧨 Supabase error:", error);
+  if (error || !assignment?.id) {
+    console.error("❌ assignWorkout insert 실패", error);
     return res.json(replyText("과제 저장 중 문제가 발생했습니다."));
   }
 
   console.log("✅ 과제 등록 성공:", assignment);
 
-  for (const date of dates) {
-    const targetDate = date.toISOString().slice(0, 10);
+  for (const { date, time } of scheduleDates) {
     const { error: scheduleError } = await supabase
       .from("assignment_schedules")
       .insert({
         assignment_id: assignment.id,
-        target_date: targetDate
+        target_date: date,
+        target_time: time || null // ⚠️ Supabase에 컬럼 추가 필요
       });
 
     if (scheduleError) {
@@ -97,6 +73,6 @@ export default async function assignWorkout(kakaoId, utterance, res) {
   }
 
   return res.json(replyText(
-    `✅ ${name}님에게 과제가 성공적으로 등록되었습니다.\n[${title}]\n📅 지정일: ${dates.length > 0 ? dates.map(d => d.toLocaleDateString()).join(", ") : "오늘"}`
+    `✅ ${name}님에게 과제가 성공적으로 등록되었습니다.\n[${title}]\n📅 지정일: ${scheduleDates.map(d => d.date + (d.time ? ` ${d.time}` : '')).join(", ")}`
   ));
 }
