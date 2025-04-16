@@ -1,4 +1,4 @@
-// handlers/booking/confirmReservation.mjs (요일+날짜 기반 처리)
+// handlers/booking/confirmReservation.mjs (요일+날짜 기반 대응 개선)
 import { supabase } from "../../services/supabase.mjs";
 import { replyText } from "../../utils/reply.mjs";
 
