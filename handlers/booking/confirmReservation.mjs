@@ -1,4 +1,4 @@
-// handlers/booking/confirmReservation.mjs
+// handlers/booking/confirmReservation.mjs (요일+날짜 기반 처리)
 import { supabase } from "../../services/supabase.mjs";
 import { replyText } from "../../utils/reply.mjs";
 
@@ -20,18 +20,18 @@ export default async function confirmReservation(kakaoId, utterance, res) {
     return res.json(replyText("트레이너 정보를 불러올 수 없습니다."));
   }
 
-  const match = utterance.match(/([월화수목금토일])\s(\d{2}:\d{2})\s~\s(\d{2}:\d{2})/);
+  const match = utterance.match(/([월화수목금토일])\s*\((\d{4}-\d{2}-\d{2})\)\s(\d{2}:\d{2})\s~\s(\d{2}:\d{2})/);
   if (!match) {
     return res.json(replyText("선택하신 시간 형식을 이해하지 못했어요. 다시 선택해주세요."));
   }
 
-  const [_, weekday, start_time, end_time] = match;
+  const [_, weekday, date, start_time, end_time] = match;
 
   const { data: existing } = await supabase
     .from("schedules")
     .select("id")
     .eq("trainer_id", trainer.id)
-    .eq("weekday", weekday)
+    .eq("date", date)
     .eq("start_time", start_time)
     .maybeSingle();
 
@@ -42,7 +42,7 @@ export default async function confirmReservation(kakaoId, utterance, res) {
   const { error } = await supabase.from("schedules").insert({
     member_id: member.id,
     trainer_id: trainer.id,
-    weekday,
+    date,
     start_time,
     end_time,
     status: "확정"
@@ -53,7 +53,6 @@ export default async function confirmReservation(kakaoId, utterance, res) {
     return res.json(replyText("레슨 예약 중 문제가 발생했습니다. 다시 시도해주세요."));
   }
 
-  // ✅ 사용자에게 안내
-  console.log(`📢 트레이너 알림: ${member.name}님이 ${weekday} ${start_time}~${end_time} 레슨 예약함`);
-  return res.json(replyText(`✅ ${member.name}님, ${weekday} ${start_time} ~ ${end_time} 레슨이 예약되었습니다.`));
+  console.log(`📢 트레이너 알림: ${member.name}님이 ${date} ${start_time}~${end_time} 레슨 예약함`);
+  return res.json(replyText(`✅ ${member.name}님, ${date} ${start_time} ~ ${end_time} 레슨이 예약되었습니다.`));
 }
