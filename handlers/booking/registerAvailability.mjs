@@ -55,8 +55,16 @@ export default async function registerAvailability(kakaoId, utterance, res) {
     date: getNextDateOfWeek(slot.weekday)
   }));
 
+  // 오류 로깅 보완
   const { error } = await supabase.from("trainer_availability").insert(inserts);
-  if (error) return res.json(replyText("❌ 시간 저장 중 문제가 발생했습니다. 다시 시도해주세요."));
+
+  if (error) {
+    console.error("❌ Supabase insert 실패 in registerAvailability:");
+    console.error("📦 데이터:", JSON.stringify(inserts, null, 2));
+    console.error("🧨 에러:", error);
+    return res.json(replyText("❌ 시간 저장 중 문제가 발생했습니다. 다시 시도해주세요."));
+  }
+  
 
   const summary = inserts.map(i => `📅 ${i.date} (${i.weekday}) ${i.start_time}~${i.end_time}`).join("\n");
   return res.json(replyText(`✅ 다음 가용 시간이 성공적으로 등록되었습니다:\n${summary}`));
