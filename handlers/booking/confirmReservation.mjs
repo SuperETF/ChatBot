@@ -54,8 +54,6 @@ export default async function confirmReservation(kakaoId, utterance, res) {
   }
 
   // ✅ 사용자에게 안내
-  await res.json(replyText(`✅ ${member.name}님, ${weekday} ${start_time} ~ ${end_time} 레슨이 예약되었습니다.`));
-
-  // ✅ 콘솔 기반 트레이너 알림 로그 (추후 전송 연동 가능)
   console.log(`📢 트레이너 알림: ${member.name}님이 ${weekday} ${start_time}~${end_time} 레슨 예약함`);
+  return res.json(replyText(`✅ ${member.name}님, ${weekday} ${start_time} ~ ${end_time} 레슨이 예약되었습니다.`));
 }
