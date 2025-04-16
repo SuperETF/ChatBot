@@ -148,7 +148,12 @@ export default async function classifyIntent(utterance, kakaoId) {
       result.handler = "workout";
       result.action = "reportWorkoutCondition";
     }
-
+    if (result.intent === "운동 지시" && result.handler === "workout") {
+      result.intent = "과제 등록";
+      result.handler = "assignment";
+      result.action = "assignWorkout";
+    }
+    
     if (!result.action) {
       result.action = result.handler;
     }

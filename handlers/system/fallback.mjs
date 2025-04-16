@@ -16,11 +16,9 @@ export default async function fallback(utterance, kakaoId, res) {
 
   return res.json(replyText(
     "🤔 말씀하신 내용을 잘 이해하지 못했어요.\n\n" +
-    "예를 들면 이렇게 말해볼 수 있어요:\n" +
-    "• 회원 등록 김복두 01012345678\n" +
-    "• 오늘 뭐 해야 해?\n" +
-    "• 월요일 18시~19시\n" +
-    "• 시작하기\n\n" +
+    "• 회원 김복두 01012345678\n" +
+    "• 개인 운동\n" +
+    "• 수업 예약\n" +
     "원하시는 기능을 다시 입력해 주세요!"
   ));
 }
