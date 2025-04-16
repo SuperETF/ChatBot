@@ -2,7 +2,6 @@ import { openai } from "../../services/openai.js";
 import { supabase } from "../../services/supabase.js";
 import { fetchRecentHistory } from "../../utils/fetchHistoryForRAG.js";
 import { fetchRecentFallback } from "../../utils/fetchRecentFallback.js";
-import { getTodayAssignment } from "../../handlers/getTodayAssignment.js";
 
 const YES_KEYWORDS = ["네", "그래", "응", "좋아", "알겠어", "등록 원해", "등록할게", "진행해"];
 const NO_KEYWORDS = ["아니요", "아니", "괜찮아요", "안 할래", "지금은 아니야"];
@@ -35,18 +34,11 @@ export default async function classifyIntent(utterance, kakaoId) {
     return { intent: "기타", handler: "fallback" };
   }
 
-  // intent 분기
-if (handler === "getTodayAssignment") {
-  return getTodayAssignment(kakaoId, res);
-}
-
-
-// classifyIntent.js 예시 결과:
-if (/오늘.*(과제|운동|뭐해|뭐 해야|스케줄)/.test(utterance)) {
-  return { intent: "오늘의 과제 조회", handler: "getTodayAssignment" };
-}
-
   // ✅ 4. rule-based 분기 (handler + action)
+  if (/오늘.*(과제|운동|뭐해|뭐 해야|스케줄)/.test(clean)) {
+    return { intent: "오늘의 과제 조회", handler: "getTodayAssignment" };
+  }
+
   if (clean === "개인 운동") return { intent: "개인 운동 예약 시작", handler: "booking", action: "showPersonalSlots" };
   if (/^\d{1,2}시 취소$/.test(clean)) return { intent: "개인 운동 예약 취소", handler: "booking", action: "cancelPersonal" };
   if (/^\d{1,2}시$/.test(clean)) return { intent: "개인 운동 예약", handler: "booking", action: "reservePersonal" };
@@ -119,3 +111,4 @@ JSON 형식:
     return { intent: "기타", handler: "fallback" };
   }
 }
+
