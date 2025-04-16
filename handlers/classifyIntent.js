@@ -10,52 +10,65 @@ const sessionContext = {};
 export default async function classifyIntent(utterance, kakaoId) {
   const cleanUtterance = utterance.normalize("NFKC").trim();
 
-  // ❌ 1. 부정 응답 → 세션 초기화
+  // 1. 부정 응답
   if (NO_KEYWORDS.includes(cleanUtterance)) {
-    console.log("🛑 부정 응답 → 컨텍스트 초기화");
     sessionContext[kakaoId] = null;
     return { intent: "기타", handler: "fallback" };
   }
 
-  // 🔁 2. 긍정 응답 → 이전 컨텍스트 기반 intent 복원
+  // 2. 긍정 응답 → 최근 intent 이어서 복원
   if (YES_KEYWORDS.includes(cleanUtterance)) {
     const last = sessionContext[kakaoId];
     if (last?.handler) {
-      console.log("↪️ 컨텍스트 기반 intent 복원:", last.intent);
       return { intent: last.intent, handler: last.handler };
     }
-
-    // fallback 방지: 최근 intent가 없더라도 안전하게 회원 등록으로 유지
     return { intent: "회원 등록", handler: "trainerRegisterMember" };
   }
 
-  // ↩️ 3. '등록'이라는 단어로만 온 경우 → 이전 컨텍스트 유지
+  // 3. '등록' 포함 응답
   if (cleanUtterance === "등록" || cleanUtterance.startsWith("등록")) {
     const last = sessionContext[kakaoId];
     if (last?.handler) {
-      console.log("↪️ '등록' 포함 발화 → 이전 intent 유지:", last.intent);
       return { intent: last.intent, handler: last.handler };
     }
     return { intent: "기타", handler: "fallback" };
   }
 
-  // ✅ 4. 명확한 패턴 기반 intent 우선 매칭
+  // ✅ 4. 정규식 기반 rule match (우선 처리)
+
   if (/^회원 등록\s[가-힣]{2,4}\s01[0-9]{7,8}$/.test(cleanUtterance)) {
-    console.log("📌 rule-match: 트레이너가 회원 등록");
     return { intent: "회원 등록", handler: "trainerRegisterMember" };
   }
 
   if (/^회원\s[가-힣]{2,4}\s01[0-9]{7,8}$/.test(cleanUtterance)) {
-    console.log("📌 rule-match: 회원 본인 등록");
     return { intent: "회원 등록", handler: "registerMember" };
   }
 
   if (/^전문가\s[가-힣]{2,4}\s01[0-9]{7,8}$/.test(cleanUtterance)) {
-    console.log("📌 rule-match: 전문가 등록");
     return { intent: "전문가 등록", handler: "registerTrainer" };
   }
 
-  // 🤖 5. GPT 분류 수행
+  if (cleanUtterance === "레슨") {
+    return { intent: "운동 예약", handler: "showTrainerSlots" };
+  }
+
+  if (/^[월화수목금토일]\s\d{2}:\d{2}\s~\s\d{2}:\d{2}$/.test(cleanUtterance)) {
+    return { intent: "레슨 시간 선택", handler: "confirmReservation" };
+  }
+
+  if (cleanUtterance === "개인 운동") {
+    return { intent: "개인 운동 예약 시작", handler: "showPersonalWorkoutSlots" };
+  }
+
+  if (/^\d{1,2}시$/.test(cleanUtterance)) {
+    return { intent: "개인 운동 예약", handler: "reservePersonalWorkout" };
+  }
+
+  if (/^\d{1,2}시 취소$/.test(cleanUtterance)) {
+    return { intent: "개인 운동 예약 취소", handler: "cancelPersonalWorkout" };
+  }
+
+  // ✅ 5. GPT 분류 fallback
   const prompt = `
 다음 문장을 intent와 handler로 분류해줘:
 
@@ -108,7 +121,7 @@ export default async function classifyIntent(utterance, kakaoId) {
 
     const result = JSON.parse(response.choices[0].message.content.trim());
 
-    // 🧠 전문가일 경우 → 회원 등록 핸들러를 trainerRegisterMember로 변경
+    // 전문가인 경우 핸들러 전환
     if (result.intent === "회원 등록") {
       const { data: trainer } = await supabase
         .from("trainers")
@@ -118,7 +131,6 @@ export default async function classifyIntent(utterance, kakaoId) {
 
       if (trainer) {
         result.handler = "trainerRegisterMember";
-        console.log("👨‍🏫 전문가로 감지됨 → 핸들러 변경: trainerRegisterMember");
       }
     }
 
@@ -129,7 +141,7 @@ export default async function classifyIntent(utterance, kakaoId) {
 
     return result;
   } catch (e) {
-    console.warn("⚠️ GPT 분류 실패, fallback 으로 전환", e);
+    console.warn("⚠️ GPT 분류 실패:", e);
     sessionContext[kakaoId] = null;
     return { intent: "기타", handler: "fallback" };
   }

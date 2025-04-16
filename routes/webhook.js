@@ -83,7 +83,7 @@ router.post("/", async (req, res) => {
   const { intent, handler } = await classifyIntent(utterance, kakaoId);
   console.log("[INTENT] 분류 결과:", intent);
 
-  // ✅ 운동 예약 intent 직접 처리
+  // ✅ 운동 예약 intent 처리
   if (utterance === "레슨" || intent === "운동 예약") {
     return showTrainerSlots(kakaoId, res);
   }
@@ -94,6 +94,18 @@ router.post("/", async (req, res) => {
 
   if (ctx?.intent === "특이사항 입력") {
     return handleConditionReport(kakaoId, utterance, res);
+  }
+
+  if (utterance === "개인 운동") {
+    return showPersonalWorkoutSlots(kakaoId, res);
+  }
+
+  if (/^\d{1,2}시 취소$/.test(utterance)) {
+    return cancelPersonalWorkout(kakaoId, utterance, res);
+  }
+
+  if (/^\d{1,2}시$/.test(utterance)) {
+    return reservePersonalWorkout(kakaoId, utterance, res);
   }
 
   if (intent === "회원 등록" && handler === "trainerRegisterMember") {
@@ -152,10 +164,7 @@ router.post("/", async (req, res) => {
     "전문가 등록": registerTrainer,
     "회원 등록": registerMember,
     "심박수 입력": recordHeartRate,
-    "자유 입력": handleFreeInput,
-    "개인 운동 예약": reservePersonalWorkout,
-    "개인 운동 시간 조회": showPersonalWorkoutSlots,
-    "개인 운동 예약 취소": cancelPersonalWorkout
+    "자유 입력": handleFreeInput
   }[intent];
 
   if (handlerFunc) {

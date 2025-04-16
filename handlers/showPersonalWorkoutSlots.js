@@ -1,33 +1,34 @@
-// ✅ handlers/showPersonalWorkoutSlots.js
-
 import { supabase } from "../services/supabase.js";
 import { replyButton } from "../utils/reply.js";
 
-export default async function showPersonalWorkoutSlots(kakaoId, utterance, res) {
+export default async function showPersonalWorkoutSlots(kakaoId, res) {
+  // 1. 회원 정보 확인
+  const { data: member } = await supabase
+    .from("members")
+    .select("id")
+    .eq("kakao_id", kakaoId)
+    .maybeSingle();
+
+  if (!member) {
+    return res.json(replyButton("회원 정보를 찾을 수 없습니다. 등록하시겠어요?", ["회원 등록"]));
+  }
+
+  // 2. 오늘 날짜 기준
   const today = new Date();
-  const todayStr = today.toISOString().slice(0, 10); // 'YYYY-MM-DD'
+  const date = today.toISOString().slice(0, 10);
+  const hours = ["18시", "19시", "20시", "21시"];
 
-  const hours = Array.from({ length: 17 }, (_, i) => `${6 + i}시`); // 06시 ~ 22시
+  // 3. 각 시간대 예약 인원 확인
+  const buttons = [];
+  for (const hour of hours) {
+    const { count } = await supabase
+      .from("personal_workout_reservations")
+      .select("*", { count: "exact", head: true })
+      .eq("date", date)
+      .eq("hour", hour);
 
-  // 시간별 예약 인원 수 확인
-  const reservations = await supabase
-    .from("personal_workout_reservations")
-    .select("hour, count:hour", { count: "exact" })
-    .eq("date", todayStr)
-    .group("hour");
+    buttons.push(`${hour} (예약: ${count}명)`);
+  }
 
-  const countMap = (reservations.data || []).reduce((acc, cur) => {
-    acc[cur.hour] = cur.count;
-    return acc;
-  }, {});
-
-  const buttons = hours.map(hour => {
-    const count = countMap[hour] || 0;
-    return `${hour} (${count}명)`;
-  }).slice(0, 10); // 최대 10개까지 출력
-
-  return res.json(replyButton(
-    `오늘 개인 운동 가능한 시간대입니다.\n\n원하시는 시간대를 선택해주세요.`,
-    buttons
-  ));
+  return res.json(replyButton("오늘 예약 가능한 시간대입니다:", buttons));
 }
