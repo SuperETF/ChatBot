@@ -1,4 +1,4 @@
-import { supabase } from "../services/supabase.js";
+import { supabase } from "../services/supabase.mjs";
 
 export async function logFallbackSuggestion({ kakaoId, utterance, suggestion }) {
   const { error } = await supabase.from("fallback_logs").insert({

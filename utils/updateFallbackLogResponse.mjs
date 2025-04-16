@@ -1,4 +1,4 @@
-import { supabase } from "../services/supabase.js";
+import { supabase } from "../services/supabase.mjs";
 import fs from "fs";
 import path from "path";
 

@@ -1,5 +1,5 @@
 // 📁 utils/fetchRecentFallback.js
-import { supabase } from "../services/supabase.js";
+import { supabase } from "../services/supabase.mjs";
 
 export async function fetchRecentFallback(kakaoId, limit = 3) {
   const { data, error } = await supabase

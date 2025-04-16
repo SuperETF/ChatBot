@@ -1,5 +1,5 @@
 // 📁 utils/fetchHistoryForRag.js
-import { supabase } from "../services/supabase.js";
+import { supabase } from "../services/supabase.mjs";
 
 export async function fetchRecentHistory(kakaoId, limit = 5) {
   const { data, error } = await supabase

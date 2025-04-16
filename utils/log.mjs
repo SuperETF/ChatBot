@@ -1,4 +1,4 @@
-import { supabase } from "../services/supabase.js";
+import { supabase } from "../services/supabase.mjs";
 
 export async function logMultiTurnStep({ kakaoId, intent, step, utterance }) {
   const { error } = await supabase.from("conversation_logs").insert({
