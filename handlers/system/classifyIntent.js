@@ -1,7 +1,7 @@
 import { openai } from "../../services/openai.js";
 import { supabase } from "../../services/supabase.js";
-import { fetchRecentHistory } from "../utils/fetchHistoryForRAG.js";
-import { fetchRecentFallback } from "../utils/fetchRecentFallback.js";
+import { fetchRecentHistory } from "../../utils/fetchHistoryForRAG.js";
+import { fetchRecentFallback } from "../../utils/fetchRecentFallback.js";
 import { getTodayAssignment } from "../handlers/getTodayAssignment.js";
 
 const YES_KEYWORDS = ["네", "그래", "응", "좋아", "알겠어", "등록 원해", "등록할게", "진행해"];
