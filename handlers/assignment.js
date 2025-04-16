@@ -1,7 +1,7 @@
-// ✅ handlers/assignment.js 업데이트 (날짜 포함 과제 등록)
 import { supabase } from "../services/supabase.js";
 import { replyText } from "../utils/reply.js";
 
+// ✅ 날짜 텍스트 파싱
 function extractDatesFromText(text) {
   const today = new Date();
   const dates = [];
@@ -11,6 +11,7 @@ function extractDatesFromText(text) {
     d.setDate(d.getDate() + 1);
     dates.push(d);
   }
+
   if (/격일/.test(text)) {
     for (let i = 0; i < 7; i += 2) {
       const d = new Date(today);
@@ -30,7 +31,13 @@ function extractDatesFromText(text) {
   return dates;
 }
 
-export async function assignWorkout(kakaoId, utterance, res) {
+// ✅ 과제 등록 액션
+export default async function assignment(kakaoId, utterance, res, action) {
+  if (action !== "assignWorkout") {
+    return res.json(replyText("잘못된 과제 액션입니다."));
+  }
+
+  // 1. 트레이너 인증
   const { data: trainer } = await supabase
     .from("trainers")
     .select("id")
@@ -41,6 +48,7 @@ export async function assignWorkout(kakaoId, utterance, res) {
     return res.json(replyText("트레이너 인증 정보가 없습니다."));
   }
 
+  // 2. 이름 + 과제 분리
   const nameMatch = utterance.match(/[가-힣]{2,4}/);
   const title = utterance.replace(nameMatch?.[0], "").trim();
 
@@ -50,6 +58,7 @@ export async function assignWorkout(kakaoId, utterance, res) {
 
   const name = nameMatch[0];
 
+  // 3. 회원 찾기
   const { data: member } = await supabase
     .from("members")
     .select("id")
@@ -61,21 +70,27 @@ export async function assignWorkout(kakaoId, utterance, res) {
     return res.json(replyText(`${name}님은 당신의 회원이 아니거나 존재하지 않습니다.`));
   }
 
+  // 4. 날짜 파싱
   const dates = extractDatesFromText(utterance);
 
-  const { data: assignment, error } = await supabase.from("personal_assignments").insert({
-    member_id: member.id,
-    trainer_id: trainer.id,
-    title,
-    status: "대기"
-  }).select().single();
+  // 5. 과제 저장
+  const { data: assignment, error } = await supabase
+    .from("personal_assignments")
+    .insert({
+      member_id: member.id,
+      trainer_id: trainer.id,
+      title,
+      status: "대기"
+    })
+    .select()
+    .single();
 
   if (error) {
     console.error("과제 저장 실패:", error);
     return res.json(replyText("과제 저장 중 문제가 발생했습니다."));
   }
 
-  // 날짜 테이블 저장
+  // 6. 날짜별 스케줄 저장
   for (const date of dates) {
     await supabase.from("assignment_schedules").insert({
       assignment_id: assignment.id,
@@ -83,5 +98,7 @@ export async function assignWorkout(kakaoId, utterance, res) {
     });
   }
 
-  return res.json(replyText(`✅ ${name}님에게 과제가 성공적으로 등록되었습니다.\n[${title}]\n📅 지정일: ${dates.map(d => d.toLocaleDateString()).join(", ") || "오늘"}`));
+  return res.json(replyText(
+    `✅ ${name}님에게 과제가 성공적으로 등록되었습니다.\n[${title}]\n📅 지정일: ${dates.length > 0 ? dates.map(d => d.toLocaleDateString()).join(", ") : "오늘"}`
+  ));
 }
