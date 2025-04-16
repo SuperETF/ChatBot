@@ -36,17 +36,19 @@ export default async function classifyIntent(utterance, kakaoId) {
     return { intent: "오늘의 과제 조회", handler: "getTodayAssignment" };
   }
 
-  // ✅ 전문가 등록 (단독 발화 포함)
+  // ✅ 전문가 등록
   if (clean === "전문가 등록") {
     return { intent: "전문가 등록", handler: "auth", action: "registerTrainer" };
   }
-  if (/^전문가\s[가-힣]{2,4}\s01[0-9]{7,8}$/.test(clean)) {
+  if (/전문가.*01[016789]\d{7,8}/.test(clean)) {
     return { intent: "전문가 등록", handler: "auth", action: "registerTrainer" };
   }
-  if (/^회원 등록\s[가-힣]{2,4}\s01[0-9]{7,8}$/.test(clean)) {
+
+  // ✅ 회원 등록
+  if (/회원 등록.*01[016789]\d{7,8}/.test(clean)) {
     return { intent: "회원 등록", handler: "auth", action: "registerTrainerMember" };
   }
-  if (/^회원\s[가-힣]{2,4}\s01[0-9]{7,8}$/.test(clean)) {
+  if (/회원.*01[016789]\d{7,8}/.test(clean)) {
     return { intent: "회원 등록", handler: "auth", action: "registerMember" };
   }
 
@@ -58,13 +60,21 @@ export default async function classifyIntent(utterance, kakaoId) {
   if (clean === "레슨") return { intent: "운동 예약", handler: "booking", action: "showTrainerSlots" };
   if (/[월화수목금토일].*?시\s*~\s*\d{1,2}시/.test(clean)) return { intent: "가용 시간 등록", handler: "auth", action: "registerAvailability" };
 
-  // ✅ 과제 등록/진행 흐름
-  if (/^[가-힣]{2,4},.*(스쿼트|팔굽혀펴기|런지|운동|과제)/.test(clean)) return { intent: "과제 등록", handler: "assignment", action: "assignWorkout" };
+  // ✅ 과제 등록
+  if (/^[가-힣]{2,10},.*(스쿼트|팔굽혀펴기|런지|운동|과제)/.test(clean)) {
+    return { intent: "과제 등록", handler: "assignment", action: "assignWorkout" };
+  }
+
+  // ✅ 운동 흐름
   if (clean === "시작하기") return { intent: "운동 시작", handler: "startWorkout" };
   if (clean === "운동 완료") return { intent: "운동 완료", handler: "completeWorkout" };
-  if (clean.length > 5 && /통증|무릎|어깨|허리|아픔|불편/.test(clean)) return { intent: "운동 특이사항", handler: "reportWorkoutCondition" };
 
-  // fallback → GPT
+  // ✅ 특이사항 보고
+  if (clean.length > 5 && /통증|무릎|어깨|허리|아픔|불편/.test(clean)) {
+    return { intent: "운동 특이사항", handler: "reportWorkoutCondition" };
+  }
+
+  // ✅ fallback → GPT
   const prompt = `다음 문장을 intent와 handler, action으로 분류해줘:
 "${utterance}"
 기능 목록:
@@ -106,6 +116,11 @@ JSON 형식:
 
     const result = JSON.parse(response.choices[0].message.content.trim());
 
+    // ✅ 분류 검증
+    if (!result.intent || !result.handler) {
+      throw new Error("GPT 분류 실패: 필수 필드 누락");
+    }
+
     sessionContext[kakaoId] = {
       intent: result.intent,
       handler: result.handler,
@@ -114,8 +129,16 @@ JSON 형식:
 
     return result;
   } catch (e) {
-    console.warn("⚠️ GPT 분류 실패:", e);
+    console.warn("⚠️ GPT fallback 분류 실패:", e);
     sessionContext[kakaoId] = null;
+
+    // fallback 로그 저장
+    await supabase.from("fallback_logs").insert({
+      kakao_id: kakaoId,
+      utterance,
+      timestamp: new Date()
+    });
+
     return { intent: "기타", handler: "fallback" };
   }
 }
