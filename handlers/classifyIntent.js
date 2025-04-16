@@ -35,6 +35,9 @@ export default async function classifyIntent(utterance, kakaoId) {
   }
 
   // ✅ 4. 정규식 기반 rule match (우선 처리)
+  if (/[월화수목금토일].*?시\\s*~\\s*\\d{1,2}시/.test(cleanUtterance)) {
+    return { intent: "가용 시간 등록", handler: "registerAvailability" };
+  }
 
   if (/^회원 등록\s[가-힣]{2,4}\s01[0-9]{7,8}$/.test(cleanUtterance)) {
     return { intent: "회원 등록", handler: "trainerRegisterMember" };
