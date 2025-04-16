@@ -1,8 +1,8 @@
-// server.js
+// server.mjs
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import webhookRouter from "./routes/webhook.js";
+import webhookRouter from "./routes/webhook.mjs"; // 반드시 .mjs 확장자 포함
 
 dotenv.config();
 
