@@ -1,10 +1,11 @@
-// webhook.js
+// webhook.mjs
 import express from "express";
-import { handlers } from "../handlers/index.js";
-import classifyIntent from "../handlers/system/classifyIntent.js";
-import fallback from "../handlers/system/fallback.js";
-import { replyText, replyButton } from "../utils/reply.js";
-import { logMultiTurnStep } from "../utils/log.js";
+import { handlers } from "../handlers/index.mjs";
+import classifyIntent from "../handlers/system/classifyIntent.mjs";
+import fallback from "../handlers/system/fallback.mjs";
+import { replyText, replyButton } from "../utils/reply.mjs";
+import { logMultiTurnStep } from "../utils/log.mjs";
+
 const router = express.Router();
 const sessionContext = {};
 const SESSION_TTL_MS = 2 * 60 * 1000;
