@@ -1,4 +1,3 @@
-// handlers/assignment/assignWorkout.js
 import { supabase } from "../../services/supabase.mjs";
 import { replyText } from "../../utils/reply.mjs";
 
@@ -74,20 +73,27 @@ export default async function assignWorkout(kakaoId, utterance, res) {
     .select()
     .single();
 
-    if (error) {
-      console.error("❌ assignWorkout insert 실패");
-      console.error("📦 payload:", { title, trainer_id: trainer.id, member_id: member.id });
-      console.error("🧨 Supabase error:", error);
-    
-      return res.json(replyText("과제 저장 중 문제가 발생했습니다."));
-    }
-    
+  if (error || !assignment || !assignment.id) {
+    console.error("❌ assignWorkout insert 실패");
+    console.error("📦 payload:", { title, trainer_id: trainer.id, member_id: member.id });
+    console.error("🧨 Supabase error:", error);
+    return res.json(replyText("과제 저장 중 문제가 발생했습니다."));
+  }
+
+  console.log("✅ 과제 등록 성공:", assignment);
 
   for (const date of dates) {
-    await supabase.from("assignment_schedules").insert({
-      assignment_id: assignment.id,
-      target_date: date.toISOString().slice(0, 10)
-    });
+    const targetDate = date.toISOString().slice(0, 10);
+    const { error: scheduleError } = await supabase
+      .from("assignment_schedules")
+      .insert({
+        assignment_id: assignment.id,
+        target_date: targetDate
+      });
+
+    if (scheduleError) {
+      console.error("❌ 일정 등록 실패:", scheduleError);
+    }
   }
 
   return res.json(replyText(
