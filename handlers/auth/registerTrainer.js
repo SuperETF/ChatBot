@@ -1,7 +1,7 @@
 // ✅ handlers/registerTrainer.js (리팩토링 + 정규식 안정화 + 변수 순서 수정)
 
-import { supabase } from "../services/supabase.js";
-import { replyText, replyButton } from "../utils/reply.js";
+import { supabase } from "../../services/supabase.js";
+import { replyText, replyButton } from "../../utils/reply.js";
 console.log("✅ registerTrainer 실행됨");
 
 
