@@ -1,6 +1,8 @@
 import express from "express";
 import { supabase } from "../services/supabase.js";
 import classifyIntent from "../handlers/system/classifyIntent.js";
+import fallback from "../handlers/system/fallback.js";
+
 
 // 📂 핸들러 그룹
 import booking from "../handlers/booking.js";
