@@ -1,6 +1,6 @@
 // webhook.js
 import express from "express";
-import { handlers } from "./handlers/index.js";
+import { handlers } from "../handlers/index.js";
 import classifyIntent from "./handlers/system/classifyIntent.js";
 import fallback from "./handlers/system/fallback.js";
 import { replyText, replyButton } from "./utils/reply.js";
