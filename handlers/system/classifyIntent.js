@@ -36,7 +36,10 @@ export default async function classifyIntent(utterance, kakaoId) {
     return { intent: "오늘의 과제 조회", handler: "getTodayAssignment" };
   }
 
-  // ✅ 순서 중요: 전문가 → 회원 등록
+  // ✅ 전문가 등록 (단독 발화 포함)
+  if (clean === "전문가 등록") {
+    return { intent: "전문가 등록", handler: "auth", action: "registerTrainer" };
+  }
   if (/^전문가\s[가-힣]{2,4}\s01[0-9]{7,8}$/.test(clean)) {
     return { intent: "전문가 등록", handler: "auth", action: "registerTrainer" };
   }
