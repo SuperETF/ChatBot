@@ -22,6 +22,9 @@ import fallback from "../handlers/fallback.js";
 import recordStrengthRecord from "../handlers/recordStrengthRecord.js";
 import recordPersonalCondition from "../handlers/recordPersonalCondition.js";
 import handleFreeInput from "../handlers/handleFreeInput.js";
+import showTrainerSlots from "../handlers/showTrainerSlots.js";
+import confirmReservation from "../handlers/confirmReservation.js";
+import handleConditionReport from "../handlers/handleConditionReport.js";
 
 // 유틸
 import { replyText, replyButton } from "../utils/reply.js";
@@ -30,20 +33,6 @@ import { logMultiTurnStep } from "../utils/log.js";
 const router = express.Router();
 const sessionContext = {};
 const SESSION_TTL_MS = 2 * 60 * 1000;
-
-function parseBodyFromUtterance(text) {
-  const weight = text.match(/체중\s?(\d{2,3})/);
-  const fat = text.match(/체지방\s?(\d{1,2})/);
-  const muscle = text.match(/근육\s?(\d{2,3})/);
-  if (weight && fat && muscle) {
-    return {
-      weight: Number(weight[1]),
-      fat: Number(fat[1]),
-      muscle: Number(muscle[1])
-    };
-  }
-  return null;
-}
 
 router.post("/", async (req, res) => {
   const utterance = req.body.userRequest?.utterance.trim();
@@ -90,8 +79,22 @@ router.post("/", async (req, res) => {
     }
   }
 
+  // ✅ intent 분류
   const { intent, handler } = await classifyIntent(utterance, kakaoId);
   console.log("[INTENT] 분류 결과:", intent);
+
+  // ✅ 운동 예약 intent 직접 처리
+  if (utterance === "레슨" || intent === "운동 예약") {
+    return showTrainerSlots(kakaoId, res);
+  }
+
+  if (/^[월화수목금토일]\s\d{2}:\d{2}\s~\s\d{2}:\d{2}$/.test(utterance)) {
+    return confirmReservation(kakaoId, utterance, res);
+  }
+
+  if (ctx?.intent === "특이사항 입력") {
+    return handleConditionReport(kakaoId, utterance, res);
+  }
 
   if (intent === "회원 등록" && handler === "trainerRegisterMember") {
     const clean = utterance.replace(/^회원 등록\s*/, "").trim();
@@ -143,7 +146,6 @@ router.post("/", async (req, res) => {
   }
 
   const handlerFunc = {
-    "운동 예약": reserveWorkout,
     "루틴 추천": recommendRoutine,
     "식단 추천": recommendMeal,
     "내 정보 조회": showUserInfo,
