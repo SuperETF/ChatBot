@@ -1,4 +1,4 @@
-import { openai } from "../services/openai.js";
+import { openai } from "../../services/openai.js";
 
 export default async function handleFreeInput(utterance) {
   const prompt = `

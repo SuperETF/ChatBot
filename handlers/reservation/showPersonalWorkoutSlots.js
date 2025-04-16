@@ -1,5 +1,5 @@
-import { supabase } from "../services/supabase.js";
-import { replyButton } from "../utils/reply.js";
+import { supabase } from "../../services/supabase.js";
+import { replyButton } from "../../utils/reply.js";
 
 export default async function showPersonalWorkoutSlots(kakaoId, res) {
   // 1. 회원 정보 확인

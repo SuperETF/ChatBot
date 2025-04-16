@@ -1,5 +1,5 @@
-import { supabase } from "../services/supabase.js";
-import { replyText } from "../utils/reply.js";
+import { supabase } from "../../services/supabase.js";
+import { replyText } from "../../tils/reply.js";
 
 export default async function registerMember(kakaoId, utterance, res) {
   // ✅ '회원' prefix 제거

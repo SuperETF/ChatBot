@@ -1,6 +1,6 @@
-import { supabase } from "../services/supabase.js";
-import { openai } from "../services/openai.js";
-import { replyText, replyButton } from "../utils/reply.js";
+import { supabase } from "../../services/supabase.js";
+import { openai } from "../../services/openai.js";
+import { replyText, replyButton } from "../../utils/reply.js";
 
 export default async function recommendMeal(kakaoId, utterance, res) {
   const { data: member } = await supabase

@@ -1,7 +1,7 @@
 // ✅ handlers/reservePersonalWorkout.js
 
-import { supabase } from "../services/supabase.js";
-import { replyText, replyButton } from "../utils/reply.js";
+import { supabase } from "../../services/supabase.js";
+import { replyText, replyButton } from "../../utils/reply.js";
 
 export default async function reservePersonalWorkout(kakaoId, utterance, res) {
   const hourMatch = utterance.match(/(\d{1,2})시/);

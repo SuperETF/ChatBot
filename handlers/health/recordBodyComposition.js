@@ -1,5 +1,5 @@
-import { supabase } from "../services/supabase.js";
-import { replyText } from "../utils/reply.js";
+import { supabase } from "../../services/supabase.js";
+import { replyText } from "../../utils/reply.js";
 
 export default async function recordBodyComposition(kakaoIdOrName, dataOrUtterance, res) {
   let name, weight, body_fat, muscle_mass;

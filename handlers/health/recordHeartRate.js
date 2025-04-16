@@ -1,7 +1,7 @@
 // ✅ handlers/recordHeartRate.js – 심박수 입력 핸들러
 
-import { supabase } from "../services/supabase.js";
-import { replyText } from "../utils/reply.js";
+import { supabase } from "../../services/supabase.js";
+import { replyText } from "../../utils/reply.js";
 
 export default async function recordHeartRate(kakaoId, utterance, res) {
   const nameMatch = utterance.match(/[가-힣]{2,4}/);

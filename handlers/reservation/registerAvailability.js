@@ -1,6 +1,6 @@
-import { openai } from "../services/openai.js";
-import { supabase } from "../services/supabase.js";
-import { replyText } from "../utils/reply.js";
+import { openai } from "../../services/openai.js";
+import { supabase } from "../../services/supabase.js";
+import { replyText } from "../../utils/reply.js";
 
 export default async function registerAvailability(kakaoId, utterance, res) {
   // 트레이너 ID 조회

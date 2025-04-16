@@ -1,5 +1,5 @@
-import { supabase } from "../services/supabase.js";
-import { replyButton, replyText } from "../utils/reply.js";
+import { supabase } from "../../services/supabase.js";
+import { replyButton, replyText } from "../../utils/reply.js";
 
 export default async function showTrainerSlots(kakaoId, res) {
   // 1. 회원 조회

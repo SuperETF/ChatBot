@@ -1,5 +1,5 @@
-import { supabase } from "../services/supabase.js";
-import { replyText } from "../utils/reply.js";
+import { supabase } from "../../services/supabase.js";
+import { replyText } from "../../utils/reply.js";
 
 export default async function notifyTrainer(trainerId, reservationInfo) {
   const { weekday, start_time, end_time, member_id } = reservationInfo;

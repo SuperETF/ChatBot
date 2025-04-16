@@ -1,5 +1,5 @@
-import { supabase } from "../services/supabase.js";
-import { replyText } from "../utils/reply.js";
+import { supabase } from "../../services/supabase.js";
+import { replyText } from "../../utils/reply.js";
 
 export default async function cancelPersonalWorkout(kakaoId, utterance, res) {
   const hourMatch = utterance.match(/(\d{1,2})시/);

@@ -1,6 +1,6 @@
-import { supabase } from "../services/supabase.js";
-import { openai } from "../services/openai.js";
-import { replyText } from "../utils/reply.js";
+import { supabase } from "../../services/supabase.js";
+import { openai } from "../../services/openai.js";
+import { replyText } from "../../utils/reply.js";
 
 export default async function handleConditionReport(kakaoId, utterance, res) {
   // 1. 회원 찾기
