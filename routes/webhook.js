@@ -1,34 +1,55 @@
 import express from "express";
 import { supabase } from "../services/supabase.js";
-import classifyIntent from "../handlers/classifyIntent.js";
+import classifyIntent from "../handlers/system/classifyIntent.js";
 
-// 핸들러
-import reserveWorkout from "../handlers/reserveWorkout.js";
-import recommendRoutine from "../handlers/recommendRoutine.js";
-import showUserInfo from "../handlers/showUserInfo.js";
-import recordHeartRate from "../handlers/recordHeartRate.js";
-import recommendMeal from "../handlers/recommendMeal.js";
-import registerMember from "../handlers/registerMember.js";
-import registerTrainer from "../handlers/registerTrainer.js";
-import listMembers from "../handlers/listMembers.js";
-import recordBodyComposition from "../handlers/recordBodyComposition.js";
-import recordPainReport from "../handlers/recordPainReport.js";
-import registerAvailability from "../handlers/registerAvailability.js";
-import showPersonalWorkoutSlots from "../handlers/showPersonalWorkoutSlots.js";
-import reservePersonalWorkout from "../handlers/reservePersonalWorkout.js";
-import cancelPersonalWorkout from "../handlers/cancelPersonalWorkout.js";
-import trainerRegisterMember from "../handlers/trainerRegisterMember.js";
-import fallback from "../handlers/fallback.js";
-import recordStrengthRecord from "../handlers/recordStrengthRecord.js";
-import recordPersonalCondition from "../handlers/recordPersonalCondition.js";
-import handleFreeInput from "../handlers/handleFreeInput.js";
-import showTrainerSlots from "../handlers/showTrainerSlots.js";
-import confirmReservation from "../handlers/confirmReservation.js";
-import handleConditionReport from "../handlers/handleConditionReport.js";
+// 수정 핸들러
+import booking from "../handlers/booking.js";
+import auth from "../handlers/auth.js";
+
+// 📂 auth
+import registerMember from "../handlers/auth/registerMember.js";
+import registerTrainer from "../handlers/auth/registerTrainer.js";
+import trainerRegisterMember from "../handlers/auth/trainerRegisterMember.js";
+import listMembers from "../handlers/auth/listMembers.js";
+
+// ✅ webhook.js 내 assignment 구조 대응
+import assignment from "../handlers/assignment.js";
+import { startWorkout } from "../handlers/startWorkout.js";
+import { completeWorkout } from "../handlers/completeWorkout.js";
+import { reportWorkoutCondition } from "../handlers/reportWorkoutCondition.js";
+// ✅ 과제 알림
+import { getTodayAssignment } from "../handlers/getTodayAssignment.js";
+
+// 📂 reservation (레슨 + 개인 운동)
+import registerAvailability from "../handlers/reservation/registerAvailability.js";
+import showTrainerSlots from "../handlers/reservation/showTrainerSlots.js";
+import confirmReservation from "../handlers/reservation/confirmReservation.js";
+import showPersonalWorkoutSlots from "../handlers/reservation/showPersonalWorkoutSlots.js";
+import reservePersonalWorkout from "../handlers/reservation/reservePersonalWorkout.js";
+import cancelPersonalWorkout from "../handlers/reservation/cancelPersonalWorkout.js";
+
+// 📂 health
+import recordBodyComposition from "../handlers/health/recordBodyComposition.js";
+import recordHeartRate from "../handlers/health/recordHeartRate.js";
+import recordStrengthRecord from "../handlers/health/recordStrengthRecord.js";
+import recordPainReport from "../handlers/health/recordPainReport.js";
+import recordPersonalCondition from "../handlers/health/recordPersonalCondition.js";
+import handleFreeInput from "../handlers/health/handleFreeInput.js";
+
+// 📂 recommend
+import recommendRoutine from "../handlers/recommend/recommendRoutine.js";
+import recommendMeal from "../handlers/recommend/recommendMeal.js";
+
+// 📂 reminder
+import handleConditionReport from "../handlers/reminder/handleConditionReport.js";
+
+// 📂 fallback/system
+import fallback from "../handlers/system/fallback.js";
 
 // 유틸
 import { replyText, replyButton } from "../utils/reply.js";
 import { logMultiTurnStep } from "../utils/log.js";
+
 
 const router = express.Router();
 const sessionContext = {};
@@ -83,7 +104,40 @@ router.post("/", async (req, res) => {
   const { intent, handler } = await classifyIntent(utterance, kakaoId);
   console.log("[INTENT] 분류 결과:", intent);
 
+  // intent 분류 이후 분기
+if (handler === "auth") {
+  return auth(kakaoId, utterance, res, action);
+  
+}
+
+// intent 분기
+if (handler === "getTodayAssignment") {
+  return getTodayAssignment(kakaoId, res);
+}
+
+// intent 분류 이후 분기
+if (handler === "assignment") {
+  return assignment(kakaoId, utterance, res, action);
+}
+
+if (handler === "startWorkout") {
+  return startWorkout(kakaoId, res);
+}
+
+if (handler === "completeWorkout") {
+  return completeWorkout(kakaoId, res);
+}
+
+if (handler === "reportWorkoutCondition") {
+  return reportWorkoutCondition(kakaoId, utterance, res);
+}
+
   // ✅ 운동 예약 intent 처리
+
+  if (handler === "booking") {
+    return booking(kakaoId, utterance, res, action);
+  }
+
   if (utterance === "레슨" || intent === "운동 예약") {
     return showTrainerSlots(kakaoId, res);
   }
