@@ -1,7 +1,8 @@
-import * as chrono from "chrono-node";
+import { Chrono } from "chrono-node";
+import { ko } from "chrono-node/dist/locales"; // ✅ locale 직접 import (v2.8.0 기준)
 
-// ✅ 한국어 locale parser 직접 사용 (v2.8.0 이상 기준 안정적)
-const customChrono = chrono.ko;  // ⬅️ 핵심 수정 포인트
+// ✅ 한국어 locale 기반 파서 인스턴스 생성
+const customChrono = new Chrono(ko);
 
 // ✅ 단일 날짜 및 시간 파싱
 export function parseDateTimeFromText(text) {
@@ -11,12 +12,12 @@ export function parseDateTimeFromText(text) {
   for (const result of parsed) {
     const date = result.start.date();
     results.push({
-      date: date.toISOString().slice(0, 10),       // yyyy-mm-dd
-      time: date.toTimeString().slice(0, 5),       // hh:mm
+      date: date.toISOString().slice(0, 10), // yyyy-mm-dd
+      time: date.toTimeString().slice(0, 5), // hh:mm
     });
   }
 
-  // fallback: 날짜 인식 안 되거나 "오늘" 명시 시
+  // fallback: 날짜 인식 실패 or "오늘" 명시 시 → 오늘 날짜
   if (results.length === 0 || /오늘/.test(text)) {
     const now = new Date();
     results.push({
