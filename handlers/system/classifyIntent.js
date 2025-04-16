@@ -1,5 +1,5 @@
-import { openai } from "../services/openai.js";
-import { supabase } from "../services/supabase.js";
+import { openai } from "../../services/openai.js";
+import { supabase } from "../../services/supabase.js";
 import { fetchRecentHistory } from "../utils/fetchHistoryForRAG.js";
 import { fetchRecentFallback } from "../utils/fetchRecentFallback.js";
 import { getTodayAssignment } from "../handlers/getTodayAssignment.js";
