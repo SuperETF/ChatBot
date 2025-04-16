@@ -1,10 +1,11 @@
-// handlers/booking/index.js
+// handlers/booking/index.mjs
 import reservePersonal from "./reservePersonal.mjs";
 import cancelPersonal from "./cancelPersonal.mjs";
 import showPersonalSlots from "./showPersonalSlots.mjs";
 import registerAvailability from "./registerAvailability.mjs";
 import showTrainerSlots from "./showTrainerSlots.mjs";
 import confirmReservation from "./confirmReservation.mjs";
+import showMyReservations from "./showMyReservations.mjs";
 import { replyText } from "../../utils/reply.mjs";
 
 export default async function booking(kakaoId, utterance, res, action) {
@@ -21,6 +22,8 @@ export default async function booking(kakaoId, utterance, res, action) {
       return showTrainerSlots(kakaoId, utterance, res);
     case "confirmReservation":
       return confirmReservation(kakaoId, utterance, res);
+    case "showMyReservations":
+      return showMyReservations(kakaoId, utterance, res);
     default:
       return res.json(replyText("예약 기능을 찾지 못했습니다."));
   }
