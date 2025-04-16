@@ -76,7 +76,10 @@ export default async function classifyIntent(utterance, kakaoId) {
   if (/^[월화수목금토일]\\s\\d{2}:\\d{2}\\s~\\s\\d{2}:\\d{2}$/.test(clean)) {
     return { intent: "레슨 시간 선택", handler: "booking", action: "confirmReservation" };
   }
-  
+  if (/레슨.*예약|레슨.*신청|수업.*예약/.test(clean)) {
+    return { intent: "운동 예약", handler: "booking", action: "showTrainerSlots" };
+  }
+
   if (/^[가-힣]{2,10},.*(스쿼트|팔굽혀펴기|런지|운동|과제)/.test(clean)) {
     return { intent: "과제 등록", handler: "assignment", action: "assignWorkout" };
   }
