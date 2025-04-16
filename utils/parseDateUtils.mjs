@@ -1,8 +1,7 @@
 import * as chrono from "chrono-node";
 
-// ✅ 한국어 로케일 명시적으로 적용한 인스턴스 생성
-const customChrono = chrono.casual.clone();
-customChrono.locale("ko");
+// ✅ 한국어 locale parser 직접 사용 (v2.8.0 이상 기준 안정적)
+const customChrono = chrono.ko;  // ⬅️ 핵심 수정 포인트
 
 // ✅ 단일 날짜 및 시간 파싱
 export function parseDateTimeFromText(text) {
