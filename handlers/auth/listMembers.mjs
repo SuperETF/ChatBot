@@ -1,6 +1,6 @@
 // handlers/auth/listMembers.js 
-import { supabase } from "../../services/supabase.js";
-import { replyText } from "../../utils/reply.js";
+import { supabase } from "../../services/supabase.mjs";
+import { replyText } from "../../utils/reply.mjs";
 
 export default async function listMembers(kakaoId, utterance, res) {
   const { data: trainer } = await supabase

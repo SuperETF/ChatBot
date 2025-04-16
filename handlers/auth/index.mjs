@@ -1,8 +1,8 @@
-import registerTrainer from "./registerTrainer.js";
-import registerMember from "./registerMember.js";
-import registerTrainerMember from "./registerTrainerMember.js";
-import listMembers from "./listMembers.js";
-import { replyText } from "../../utils/reply.js";
+import registerTrainer from "./registerTrainer.mjs";
+import registerMember from "./registerMember.mjs";
+import registerTrainerMember from "./registerTrainerMember.mjs";
+import listMembers from "./listMembers.mjs";
+import { replyText } from "../../utils/reply.mjs";
 
 export default async function auth(kakaoId, utterance, res, action) {
   switch (action) {

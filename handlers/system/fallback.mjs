@@ -1,7 +1,7 @@
-import { openai } from "../../services/openai.js";
-import { replyButton } from "../../utils/reply.js";
-import { fetchRecentHistory } from "../../utils/fetchHistoryForRAG.js";
-import { logFallbackSuggestion } from "../../utils/logFallbackSuggestion.js"; // ✅ 로그 저장 유틸
+import { openai } from "../../services/openai.mjs";
+import { replyButton } from "../../utils/reply.mjs";
+import { fetchRecentHistory } from "../../utils/fetchHistoryForRAG.mjs";
+import { logFallbackSuggestion } from "../../utils/logFallbackSuggestion.mjs"; // ✅ 로그 저장 유틸
 
 export default async function fallback(kakaoId, utterance, res) {
   const recentHistory = await fetchRecentHistory(kakaoId);

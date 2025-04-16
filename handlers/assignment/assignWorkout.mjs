@@ -1,6 +1,6 @@
 // handlers/assignment/assignWorkout.js
-import { supabase } from "../../services/supabase.js";
-import { replyText } from "../../utils/reply.js";
+import { supabase } from "../../services/supabase.mjs";
+import { replyText } from "../../utils/reply.mjs";
 
 function extractDatesFromText(text) {
   const today = new Date();

@@ -1,6 +1,6 @@
 // handlers/workout/completeWorkout.js
-import { supabase } from "../../services/supabase.js";
-import { replyText } from "../../utils/reply.js";
+import { supabase } from "../../services/supabase.mjs";
+import { replyText } from "../../utils/reply.mjs";
 
 export default async function completeWorkout(kakaoId, utterance, res) {
   const { data: member } = await supabase

@@ -1,6 +1,6 @@
 // handlers/booking/showTrainerSlots.js
-import { supabase } from "../../services/supabase.js";
-import { replyButton, replyText } from "../../utils/reply.js";
+import { supabase } from "../../services/supabase.mjs";
+import { replyButton, replyText } from "../../utils/reply.mjs";
 
 export default async function showTrainerSlots(kakaoId, utterance, res) {
   const { data: trainer } = await supabase

@@ -1,8 +1,8 @@
 // handlers/workout/index.js
-import startWorkout from "./startWorkout.js";
-import completeWorkout from "./completeWorkout.js";
-import reportWorkoutCondition from "./reportWorkoutCondition.js";
-import { replyText } from "../../utils/reply.js";
+import startWorkout from "./startWorkout.mjs";
+import completeWorkout from "./completeWorkout.mjs";
+import reportWorkoutCondition from "./reportWorkoutCondition.mjs";
+import { replyText } from "../../utils/reply.mjs";
 
 export default async function workout(kakaoId, utterance, res, action) {
   switch (action) {

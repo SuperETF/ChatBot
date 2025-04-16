@@ -1,11 +1,11 @@
 // handlers/booking/index.js
-import reservePersonal from "./reservePersonal.js";
-import cancelPersonal from "./cancelPersonal.js";
-import showPersonalSlots from "./showPersonalSlots.js";
-import registerAvailability from "./registerAvailability.js";
-import showTrainerSlots from "./showTrainerSlots.js";
-import confirmReservation from "./confirmReservation.js";
-import { replyText } from "../../utils/reply.js";
+import reservePersonal from "./reservePersonal.mjs";
+import cancelPersonal from "./cancelPersonal.mjs";
+import showPersonalSlots from "./showPersonalSlots.mjs";
+import registerAvailability from "./registerAvailability.mjs";
+import showTrainerSlots from "./showTrainerSlots.mjs";
+import confirmReservation from "./confirmReservation.mjs";
+import { replyText } from "../../utils/reply.mjs";
 
 export default async function booking(kakaoId, utterance, res, action) {
   switch (action) {

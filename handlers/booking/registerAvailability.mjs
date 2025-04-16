@@ -1,7 +1,7 @@
 // handlers/booking/registerAvailability.js
-import { openai } from "../../services/openai.js";
-import { supabase } from "../../services/supabase.js";
-import { replyText } from "../../utils/reply.js";
+import { openai } from "../../services/openai.mjs";
+import { supabase } from "../../services/supabase.mjs";
+import { replyText } from "../../utils/reply.mjs";
 
 export default async function registerAvailability(kakaoId, utterance, res) {
   const { data: trainer } = await supabase

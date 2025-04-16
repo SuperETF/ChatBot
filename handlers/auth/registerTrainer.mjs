@@ -1,6 +1,6 @@
 // handlers/auth/registerTrainer.js
-import { supabase } from "../../services/supabase.js";
-import { replyText } from "../../utils/reply.js";
+import { supabase } from "../../services/supabase.mjs";
+import { replyText } from "../../utils/reply.mjs";
 
 export default async function registerTrainer(kakaoId, utterance, res) {
   const cleaned = utterance.replace("전문가", "").trim();

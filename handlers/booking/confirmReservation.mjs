@@ -1,6 +1,6 @@
 // handlers/booking/confirmReservation.js
-import { supabase } from "../../services/supabase.js";
-import { replyText } from "../../utils/reply.js";
+import { supabase } from "../../services/supabase.mjs";
+import { replyText } from "../../utils/reply.mjs";
 
 export default async function confirmReservation(kakaoId, utterance, res) {
   const match = utterance.match(/([월화수목금토일])\s(\d{2}:\d{2})\s~\s(\d{2}:\d{2})/);

@@ -1,6 +1,6 @@
 // handlers/assignment/getTodayAssignment.js
-import { supabase } from "../../services/supabase.js";
-import { replyText } from "../../utils/reply.js";
+import { supabase } from "../../services/supabase.mjs";
+import { replyText } from "../../utils/reply.mjs";
 
 export default async function getTodayAssignment(kakaoId, utterance, res) {
   // 1. 회원 인증

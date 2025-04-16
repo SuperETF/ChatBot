@@ -1,7 +1,7 @@
 // ✅ handlers/showMemberInfo.js – 전문가 전용 회원 정보 종합 조회
 
-import { supabase } from "../services/supabase.js";
-import { replyText } from "../utils/reply.js";
+import { supabase } from "../services/supabase.mjs";
+import { replyText } from "../utils/reply.mjs";
 
 export default async function showMemberInfo(kakaoId, utterance, res) {
   const nameMatch = utterance.match(/[가-힣]{2,4}/);

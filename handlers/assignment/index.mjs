@@ -1,7 +1,7 @@
 // handlers/assignment/index.js
-import assignWorkout from "./assignWorkout.js";
-import getTodayAssignment from "./getTodayAssignment.js";
-import { replyText } from "../../utils/reply.js";
+import assignWorkout from "./assignWorkout.mjs";
+import getTodayAssignment from "./getTodayAssignment.mjs";
+import { replyText } from "../../utils/reply.mjs";
 
 export default async function assignment(kakaoId, utterance, res, action) {
   switch (action) {

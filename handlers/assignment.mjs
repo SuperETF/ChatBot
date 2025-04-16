@@ -1,5 +1,5 @@
-import { supabase } from "../services/supabase.js";
-import { replyText } from "../utils/reply.js";
+import { supabase } from "../services/supabase.mjs";
+import { replyText } from "../utils/reply.mjs";
 
 // ✅ 날짜 텍스트 파싱
 function extractDatesFromText(text) {

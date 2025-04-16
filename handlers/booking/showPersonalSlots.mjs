@@ -1,6 +1,6 @@
 // handlers/booking/showPersonalSlots.js
-import { supabase } from "../../services/supabase.js";
-import { replyButton } from "../../utils/reply.js";
+import { supabase } from "../../services/supabase.mjs";
+import { replyButton } from "../../utils/reply.mjs";
 
 export default async function showPersonalSlots(kakaoId, utterance, res) {
   const today = new Date();
