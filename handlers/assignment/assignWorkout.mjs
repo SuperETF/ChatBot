@@ -1,9 +1,6 @@
 import { supabase } from "../../services/supabase.mjs";
 import { replyText } from "../../utils/reply.mjs";
-import {
-  parseDateTimeFromText,
-  parseDateRangeFromText
-} from "../../utils/parseDateUtils.mjs";
+import { parseDateWithFallback } from "../../utils/parseDateWithFallback.mjs"; // ✅ GPT 포함한 하이브리드 파서
 
 export default async function assignWorkout(kakaoId, utterance, res) {
   // 1. 트레이너 인증
@@ -39,22 +36,21 @@ export default async function assignWorkout(kakaoId, utterance, res) {
     return res.json(replyText(`${name}님은 당신의 회원이 아니거나 존재하지 않습니다.`));
   }
 
-  // 4. 날짜 파싱
-  const rangeDates = parseDateRangeFromText(utterance);
-  const singleDates = parseDateTimeFromText(utterance);
-  const scheduleDates = rangeDates.length > 0 ? rangeDates : singleDates;
+  // 4. 날짜 파싱 (룰 + GPT fallback 통합)
+  const scheduleDates = await parseDateWithFallback(utterance);
 
-  // ✅ 날짜 없음 → 로깅 후 종료
+  // 4-1. 날짜 파싱 실패 → 로깅 후 종료
   if (!scheduleDates || scheduleDates.length === 0) {
     await supabase.from("date_parsing_failures").insert({
       kakao_id: kakaoId,
       utterance,
-      note: "날짜 파싱 실패 (assignWorkout)"
+      note: "날짜 파싱 실패 (룰 + GPT fallback)"
     });
-    return res.json(replyText("⛔ 날짜를 인식하지 못했습니다. 예: '내일 런지 30개', '3일 뒤부터 5일간 팔굽혀펴기' 처럼 입력해주세요."));
+
+    return res.json(replyText("⛔ 날짜를 인식하지 못했습니다. 예: '내일 런지 30개', '4월 20일 스쿼트 100개'처럼 입력해주세요."));
   }
 
-  // ✅ 과거 날짜 차단
+  // 4-2. 과거 날짜 차단
   const today = new Date().toISOString().slice(0, 10);
   const hasPastDate = scheduleDates.some(d => d.date < today);
   if (hasPastDate) {
