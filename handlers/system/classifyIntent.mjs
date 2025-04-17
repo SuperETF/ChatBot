@@ -9,12 +9,11 @@ const NO_KEYWORDS = ["아니요", "아니", "괜찮아요", "안 할래", "지�
 
 const sessionContext = {};
 
-console.log("📌 fallback 모델 ID:", process.env.GPT_MODEL_ID_INTENT);
-
+// ✅ 모델 ID 매핑
 const modelMap = {
   "회원 등록": process.env.GPT_MODEL_ID_REGISTRATION_MEMBER,
   "전문가 등록": process.env.GPT_MODEL_ID_REGISTRATION_TRAINER,
-  "운동 예약": process.env.GPT_MODEL_ID_BOOKING,
+  "운동 예약": process.env.GPT_MODEL_ID_BOOKING
 };
 
 const fallbackModel = process.env.GPT_MODEL_ID_INTENT;
@@ -117,6 +116,7 @@ export default async function classifyIntent(utterance, kakaoId) {
 
     if (!result.intent || !result.handler) throw new Error("GPT fallback: 필수 필드 누락");
 
+    const selectedModel = modelMap[result.intent] || fallbackModel;
     result.action = result.action || result.handler;
     sessionContext[kakaoId] = result;
 
@@ -128,7 +128,7 @@ export default async function classifyIntent(utterance, kakaoId) {
       action: result.action,
       error_message: null,
       note: "GPT-3.5 fine-tune fallback",
-      model_used: fallbackModel
+      model_used: selectedModel
     });
 
     return result;
