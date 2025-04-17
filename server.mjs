@@ -1,5 +1,6 @@
 // ✅ .env 파일 자동 로딩
 import "dotenv/config";
+console.log("🧪 .env 모델 체크:", process.env.GPT_MODEL_ID_INTENT);
 
 import express from "express";
 import cors from "cors";
