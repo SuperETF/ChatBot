@@ -64,3 +64,38 @@ export function parseWeeklyRepeatDays(text) {
   if (!matched) return [];
   return [...matched[1]].map(c => dayMap[c]).filter(d => d !== undefined);
 }
+
+export function parseRelativeDay(text) {
+  const today = new Date();
+  const result = [];
+
+  if (text.includes("오늘")) {
+    result.push({ date: today.toISOString().slice(0, 10), time: null });
+  }
+
+  if (text.includes("내일")) {
+    const t = new Date(today);
+    t.setDate(t.getDate() + 1);
+    result.push({ date: t.toISOString().slice(0, 10), time: null });
+  }
+
+  if (text.includes("격일")) {
+    const start = new Date(today);
+    for (let i = 0; i < 5; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i * 2);
+      result.push({ date: d.toISOString().slice(0, 10), time: null });
+    }
+  }
+
+  if (text.includes("매일")) {
+    const start = new Date(today);
+    for (let i = 0; i < 5; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      result.push({ date: d.toISOString().slice(0, 10), time: null });
+    }
+  }
+
+  return result;
+}

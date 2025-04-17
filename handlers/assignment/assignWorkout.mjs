@@ -1,6 +1,6 @@
 import { supabase } from "../../services/supabase.mjs";
 import { replyText } from "../../utils/reply.mjs";
-import { parseDateWithFallback } from "../../utils/parseDateWithFallback.mjs"; // ✅ GPT 포함한 하이브리드 파서
+import { parseDateWithFallback } from "../../utils/parseDateWithFallback.mjs"; // GPT 포함 하이브리드 파서
 
 export default async function assignWorkout(kakaoId, utterance, res) {
   // 1. 트레이너 인증
@@ -14,15 +14,19 @@ export default async function assignWorkout(kakaoId, utterance, res) {
     return res.json(replyText("트레이너 인증 정보가 없습니다."));
   }
 
-  // 2. 이름 및 과제 내용 추출
-  const nameMatch = utterance.match(/[가-힣]{2,4}/);
-  const title = utterance.replace(nameMatch?.[0], "").trim();
-
-  if (!nameMatch || title.length < 3) {
-    return res.json(replyText("과제를 줄 회원의 이름과 과제 내용을 함께 입력해주세요. 예: 김복두, 하루 팔굽혀펴기 50개"));
+  // 2. 이름 및 과제 내용 추출 (존칭 제거)
+  const nameMatch = utterance.match(/[가-힣]{2,4}(님|씨|선생님)?/);
+  if (!nameMatch) {
+    return res.json(replyText("과제를 줄 회원의 이름을 포함해주세요. 예: 김복두님, 스쿼트 50개"));
   }
 
-  const name = nameMatch[0];
+  const rawName = nameMatch[0];
+  const name = rawName.replace(/(님|씨|선생님)$/, ""); // ✅ 이름만 추출
+  const title = utterance.replace(rawName, "").trim();
+
+  if (title.length < 3) {
+    return res.json(replyText("과제 내용을 함께 입력해주세요. 예: 김복두님 하루 스쿼트 50개"));
+  }
 
   // 3. 회원 정보 확인
   const { data: member } = await supabase
@@ -39,7 +43,6 @@ export default async function assignWorkout(kakaoId, utterance, res) {
   // 4. 날짜 파싱 (룰 + GPT fallback 통합)
   const scheduleDates = await parseDateWithFallback(utterance);
 
-  // 4-1. 날짜 파싱 실패 → 로깅 후 종료
   if (!scheduleDates || scheduleDates.length === 0) {
     await supabase.from("date_parsing_failures").insert({
       kakao_id: kakaoId,
@@ -50,14 +53,14 @@ export default async function assignWorkout(kakaoId, utterance, res) {
     return res.json(replyText("⛔ 날짜를 인식하지 못했습니다. 예: '내일 런지 30개', '4월 20일 스쿼트 100개'처럼 입력해주세요."));
   }
 
-  // 4-2. 과거 날짜 차단
+  // 5. 과거 날짜 차단
   const today = new Date().toISOString().slice(0, 10);
   const hasPastDate = scheduleDates.some(d => d.date < today);
   if (hasPastDate) {
     return res.json(replyText("❌ 과거 날짜에는 과제를 등록할 수 없습니다. 미래 날짜를 입력해주세요."));
   }
 
-  // 5. 과제 본문 저장
+  // 6. 과제 본문 저장
   const { data: assignment, error } = await supabase
     .from("personal_assignments")
     .insert({
@@ -76,7 +79,7 @@ export default async function assignWorkout(kakaoId, utterance, res) {
 
   console.log("✅ 과제 등록 성공:", assignment);
 
-  // 6. 일정 저장
+  // 7. 일정 저장
   const insertedDates = [];
 
   for (const { date, time } of scheduleDates) {
