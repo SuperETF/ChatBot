@@ -1,3 +1,4 @@
+import "dotenv/config";
 import registerTrainer from "./registerTrainer.mjs";
 import registerMember from "./registerMember.mjs";
 import registerTrainerMember from "./registerTrainerMember.mjs";
