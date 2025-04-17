@@ -1,6 +1,11 @@
 // ✅ .env 파일 자동 로딩
 import "dotenv/config";
-console.log("🧪 .env 모델 체크:", process.env.GPT_MODEL_ID_INTENT);
+import path from "path";
+
+// .env 위치 디버깅
+const envPath = path.resolve(process.cwd(), ".env");
+console.log("🗂️ .env 위치 확인:", envPath);
+console.log("📄 .env 파일 존재 여부:", fs.existsSync(envPath));
 
 import express from "express";
 import cors from "cors";
