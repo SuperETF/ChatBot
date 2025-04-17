@@ -9,6 +9,8 @@ const NO_KEYWORDS = ["아니요", "아니", "괜찮아요", "안 할래", "지�
 
 const sessionContext = {};
 
+console.log("📌 fallback 모델 ID:", process.env.GPT_MODEL_ID_INTENT);
+
 const modelMap = {
   "회원 등록": process.env.GPT_MODEL_ID_REGISTRATION_MEMBER,
   "전문가 등록": process.env.GPT_MODEL_ID_REGISTRATION_TRAINER,
