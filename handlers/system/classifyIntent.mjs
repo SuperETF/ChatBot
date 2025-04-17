@@ -1,4 +1,4 @@
-// classifyIntent.mjs (최종 안정화 + fallback 로깅 보완)
+// classifyIntent.mjs
 import { openai } from "../../services/openai.mjs";
 import { supabase } from "../../services/supabase.mjs";
 import { fetchRecentHistory } from "../../utils/fetchHistoryForRAG.mjs";
@@ -6,13 +6,15 @@ import { fetchRecentFallback } from "../../utils/fetchRecentFallback.mjs";
 
 const YES_KEYWORDS = ["네", "그래", "응", "좋아", "알겠어", "등록 원해", "등록할게", "진행해"];
 const NO_KEYWORDS = ["아니요", "아니", "괜찮아요", "안 할래", "지금은 아니야"];
+
 const sessionContext = {};
+
+const FINE_TUNED_INTENT_MODEL = process.env.GPT_MODEL_ID_INTENT; // ✅ .env에서 모델 ID 관리
 
 export default async function classifyIntent(utterance, kakaoId) {
   const clean = utterance.normalize("NFKC").trim();
 
-  const hourMatch = clean.match(/^\d{1,2}시/);
-  if (hourMatch) {
+  if (/^\d{1,2}시/.test(clean)) {
     return { intent: "개인 운동 예약", handler: "booking", action: "reservePersonal" };
   }
 
@@ -23,27 +25,20 @@ export default async function classifyIntent(utterance, kakaoId) {
 
   if (YES_KEYWORDS.includes(clean)) {
     const last = sessionContext[kakaoId];
-    if (last?.handler) return last;
-    return { intent: "회원 등록", handler: "auth", action: "registerTrainerMember" };
+    return last?.handler ? last : { intent: "회원 등록", handler: "auth", action: "registerTrainerMember" };
   }
 
   if (clean === "등록" || clean.startsWith("등록")) {
-    const last = sessionContext[kakaoId];
-    if (last?.handler) return last;
-    return { intent: "기타", handler: "fallback" };
+    return sessionContext[kakaoId]?.handler ? sessionContext[kakaoId] : { intent: "기타", handler: "fallback" };
   }
 
-  if (clean === "레슨") {
-    return { intent: "운동 예약", handler: "booking", action: "showTrainerSlots" };
-  }
+  if (clean === "레슨") return { intent: "운동 예약", handler: "booking", action: "showTrainerSlots" };
 
   if (/[월화수목금토일].*?\d{1,2}시\s*~\s*\d{1,2}시/.test(clean)) {
     return { intent: "가용 시간 등록", handler: "booking", action: "registerAvailability" };
   }
 
-  if (clean === "개인 운동") {
-    return { intent: "개인 운동 예약 시작", handler: "booking", action: "showPersonalSlots" };
-  }
+  if (clean === "개인 운동") return { intent: "개인 운동 예약 시작", handler: "booking", action: "showPersonalSlots" };
 
   if (/예약.*있|예약된.*시간/.test(clean)) {
     return { intent: "예약 조회", handler: "booking", action: "showMyReservations" };
@@ -77,20 +72,15 @@ export default async function classifyIntent(utterance, kakaoId) {
     return { intent: "과제 등록", handler: "assignment", action: "assignWorkout" };
   }
 
-  if (clean === "시작하기") {
-    return { intent: "운동 시작", handler: "workout", action: "startWorkout" };
-  }
-
-  if (clean === "운동 완료") {
-    return { intent: "운동 완료", handler: "workout", action: "completeWorkout" };
-  }
+  if (clean === "시작하기") return { intent: "운동 시작", handler: "workout", action: "startWorkout" };
+  if (clean === "운동 완료") return { intent: "운동 완료", handler: "workout", action: "completeWorkout" };
 
   if (clean.length > 5 && /통증|무릎|어깨|허리|아픔|불편/.test(clean)) {
     return { intent: "운동 특이사항", handler: "workout", action: "reportWorkoutCondition" };
   }
 
-  // 🧠 GPT fallback
-  const prompt = `다음 문장을 intent, handler, action으로 분류해줘.\n아래 형식으로 JSON만 출력해:\n{\n  \"intent\": \"운동 시작\",\n  \"handler\": \"workout\",\n  \"action\": \"startWorkout\"\n}\n\n문장: \"${utterance}\"`;
+  // 🧠 Fine-tuned GPT-3.5 fallback 처리
+  const prompt = `다음 문장을 intent, handler, action으로 분류해줘.\n아래 형식으로 JSON만 출력해:\n{\n  "intent": "과제 등록",\n  "handler": "assignment",\n  "action": "assignWorkout"\n}\n\n문장: "${utterance}"`;
 
   try {
     const recentHistory = await fetchRecentHistory(kakaoId);
@@ -101,58 +91,33 @@ export default async function classifyIntent(utterance, kakaoId) {
         role: "system",
         content: `🧠 최근 대화 기록:\n${recentHistory.join("\n")}\n\n🔁 이전 fallback 로그:\n${recentFallback.join("\n")}`
       },
-      {
-        role: "user",
-        content: prompt
-      }
+      { role: "user", content: prompt }
     ];
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: FINE_TUNED_INTENT_MODEL,
       messages,
       temperature: 0
     });
 
     const result = JSON.parse(response.choices[0].message.content.trim());
 
-    // 📌 fallback 결과 보정
     if (!result.intent || !result.handler) throw new Error("GPT fallback: 필수 필드 누락");
 
-    if (result.intent === "운동 지시" && result.handler === "workout") {
-      result.intent = "과제 등록";
-      result.handler = "assignment";
-      result.action = "assignWorkout";
-    }
-    if (result.intent === "회원 목록 조회" && result.handler === "member") {
-      result.handler = "auth";
-      result.action = "listMembers";
-    }
-    if (result.intent === "예약 확인" && result.handler === "reservation") {
-      result.handler = "booking";
-      result.action = "showPersonalSlots";
-    }
-    if (result.intent === "수업 시간 조회" && result.handler === "classSchedule") {
-      result.handler = "booking";
-      result.action = "showTrainerSlots";
-    }
-    if (result.intent === "운동 시작" && result.handler === "setWorkout") {
-      result.handler = "workout";
-      result.action = "startWorkout";
-    }
-    if (result.intent === "운동 완료" && result.handler === "setWorkout") {
-      result.handler = "workout";
-      result.action = "completeWorkout";
-    }
-    if (result.intent === "운동 특이사항" && result.handler === "report") {
-      result.handler = "workout";
-      result.action = "reportWorkoutCondition";
-    }
-
-    if (!result.action) {
-      result.action = result.handler;
-    }
-
+    result.action = result.action || result.handler;
     sessionContext[kakaoId] = result;
+
+    await supabase.from("fallback_logs").insert({
+      kakao_id: kakaoId,
+      utterance,
+      intent: result.intent,
+      handler: result.handler,
+      action: result.action,
+      error_message: null,
+      note: "GPT-3.5 fine-tune fallback",
+      model_used: FINE_TUNED_INTENT_MODEL
+    });
+
     return result;
   } catch (e) {
     console.warn("⚠️ GPT fallback 분류 실패:", e.message);
@@ -165,7 +130,8 @@ export default async function classifyIntent(utterance, kakaoId) {
       handler: "fallback",
       action: null,
       error_message: e.message || null,
-      note: "classifyIntent fallback"
+      note: "classifyIntent fallback",
+      model_used: "gpt-fallback-error"
     });
 
     return { intent: "기타", handler: "fallback", action: undefined };
