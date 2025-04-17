@@ -76,7 +76,7 @@ router.post("/", async (req, res) => {
       return await handlers[handler](kakaoId, utterance, res, action);
     }
 
-    return fallback(utterance, kakaoId, res);
+    return fallback(utterance, kakaoId, res, handler, action);
   } catch (error) {
     console.error("💥 webhook 처리 중 오류 발생:", error);
 
