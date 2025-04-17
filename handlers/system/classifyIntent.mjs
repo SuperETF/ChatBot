@@ -1,4 +1,4 @@
-// classifyIntent.mjs (updated)
+// classifyIntent.mjs (최종 안정화 버전)
 import { openai } from "../../services/openai.mjs";
 import { supabase } from "../../services/supabase.mjs";
 import { fetchRecentHistory } from "../../utils/fetchHistoryForRAG.mjs";
@@ -23,17 +23,13 @@ export default async function classifyIntent(utterance, kakaoId) {
 
   if (YES_KEYWORDS.includes(clean)) {
     const last = sessionContext[kakaoId];
-    if (last?.handler) {
-      return { intent: last.intent, handler: last.handler, action: last.action };
-    }
+    if (last?.handler) return last;
     return { intent: "회원 등록", handler: "auth", action: "registerTrainerMember" };
   }
 
   if (clean === "등록" || clean.startsWith("등록")) {
     const last = sessionContext[kakaoId];
-    if (last?.handler) {
-      return { intent: last.intent, handler: last.handler, action: last.action };
-    }
+    if (last?.handler) return last;
     return { intent: "기타", handler: "fallback" };
   }
 
@@ -57,43 +53,43 @@ export default async function classifyIntent(utterance, kakaoId) {
     return { intent: "오늘의 과제 조회", handler: "assignment", action: "getTodayAssignment" };
   }
 
-  if (clean === "전문가 등록") {
+  if (clean === "전문가 등록" || /전문가.*01[016789]\d{7,8}/.test(clean)) {
     return { intent: "전문가 등록", handler: "auth", action: "registerTrainer" };
   }
-  if (/전문가.*01[016789]\d{7,8}/.test(clean)) {
-    return { intent: "전문가 등록", handler: "auth", action: "registerTrainer" };
-  }
-  if (/회원 등록.*01[016789]\d{7,8}/.test(clean)) {
+
+  if (/회원 등록.*01[016789]\d{7,8}/.test(clean) || /회원.*01[016789]\d{7,8}/.test(clean)) {
     return { intent: "회원 등록", handler: "auth", action: "registerTrainerMember" };
-  }
-  if (/회원.*01[016789]\d{7,8}/.test(clean)) {
-    return { intent: "회원 등록", handler: "auth", action: "registerMember" };
   }
 
   if (/^\d{1,2}시 취소$/.test(clean)) {
     return { intent: "개인 운동 예약 취소", handler: "booking", action: "cancelPersonal" };
   }
+
   if (/^[월화수목금토일]\s*\(\d{4}-\d{2}-\d{2}\)\s\d{2}:\d{2}\s~\s\d{2}:\d{2}$/.test(clean)) {
     return { intent: "레슨 시간 선택", handler: "booking", action: "confirmReservation" };
   }
+
   if (/레슨.*예약|레슨.*신청|수업.*예약/.test(clean)) {
     return { intent: "운동 예약", handler: "booking", action: "showTrainerSlots" };
   }
 
-  if (/^[가-힣]{2,10}(,|\\s).*(스쿼트|런지|팔굽혀펴기|과제|운동)/.test(clean)) {
+  if (/^[가-힣]{2,10}(,|\s).*(런지|스쿼트|플랭크|팔굽혀펴기|버피|과제|운동)/.test(clean)) {
     return { intent: "과제 등록", handler: "assignment", action: "assignWorkout" };
   }
-  
+
   if (clean === "시작하기") {
     return { intent: "운동 시작", handler: "workout", action: "startWorkout" };
   }
+
   if (clean === "운동 완료") {
     return { intent: "운동 완료", handler: "workout", action: "completeWorkout" };
   }
+
   if (clean.length > 5 && /통증|무릎|어깨|허리|아픔|불편/.test(clean)) {
     return { intent: "운동 특이사항", handler: "workout", action: "reportWorkoutCondition" };
   }
 
+  // 🧠 GPT fallback
   const prompt = `다음 문장을 intent, handler, action으로 분류해줘.\n아래 형식으로 JSON만 출력해:\n{\n  \"intent\": \"운동 시작\",\n  \"handler\": \"workout\",\n  \"action\": \"startWorkout\"\n}\n\n문장: \"${utterance}\"`;
 
   try {
@@ -119,11 +115,14 @@ export default async function classifyIntent(utterance, kakaoId) {
 
     const result = JSON.parse(response.choices[0].message.content.trim());
 
-    // fallback 결과 보정
-    if (!result.intent || !result.handler) {
-      throw new Error("GPT fallback: 필수 필드 누락");
-    }
+    // 📌 fallback 결과 보정
+    if (!result.intent || !result.handler) throw new Error("GPT fallback: 필수 필드 누락");
 
+    if (result.intent === "운동 지시" && result.handler === "workout") {
+      result.intent = "과제 등록";
+      result.handler = "assignment";
+      result.action = "assignWorkout";
+    }
     if (result.intent === "회원 목록 조회" && result.handler === "member") {
       result.handler = "auth";
       result.action = "listMembers";
@@ -148,22 +147,12 @@ export default async function classifyIntent(utterance, kakaoId) {
       result.handler = "workout";
       result.action = "reportWorkoutCondition";
     }
-    if (result.intent === "운동 지시" && result.handler === "workout") {
-      result.intent = "과제 등록";
-      result.handler = "assignment";
-      result.action = "assignWorkout";
-    }
-    
+
     if (!result.action) {
       result.action = result.handler;
     }
 
-    sessionContext[kakaoId] = {
-      intent: result.intent,
-      handler: result.handler,
-      action: result.action
-    };
-
+    sessionContext[kakaoId] = result;
     return result;
   } catch (e) {
     console.warn("⚠️ GPT fallback 분류 실패:", e.message);
