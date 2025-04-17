@@ -1,8 +1,9 @@
 // ✅ .env 파일 자동 로딩
 import "dotenv/config";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 
-// .env 위치 디버깅
+// 📄 .env 파일 존재 확인 로그
 const envPath = path.resolve(process.cwd(), ".env");
 console.log("🗂️ .env 위치 확인:", envPath);
 console.log("📄 .env 파일 존재 여부:", fs.existsSync(envPath));
