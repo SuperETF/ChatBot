@@ -1,6 +1,5 @@
 // webhook.mjs
 import express from "express";
-import "dotenv/config";
 import { handlers } from "../handlers/index.mjs";
 import classifyIntent from "../handlers/system/classifyIntent.mjs";
 import fallback from "../handlers/system/fallback.mjs";
