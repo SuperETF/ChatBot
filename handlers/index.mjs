@@ -1,5 +1,4 @@
 // handlers/index.js
-import "dotenv/config";
 import auth from "./auth/index.mjs";
 import booking from "./booking/index.mjs";
 import assignment from "./assignment/index.mjs";
