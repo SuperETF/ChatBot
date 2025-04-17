@@ -1,4 +1,4 @@
-// classifyIntent.mjs (최종 안정화 버전)
+// classifyIntent.mjs (최종 안정화 + fallback 로깅 보완)
 import { openai } from "../../services/openai.mjs";
 import { supabase } from "../../services/supabase.mjs";
 import { fetchRecentHistory } from "../../utils/fetchHistoryForRAG.mjs";
@@ -161,7 +161,9 @@ export default async function classifyIntent(utterance, kakaoId) {
     await supabase.from("fallback_logs").insert({
       kakao_id: kakaoId,
       utterance,
-      timestamp: new Date(),
+      intent: "기타",
+      handler: "fallback",
+      action: null,
       error_message: e.message || null,
       note: "classifyIntent fallback"
     });

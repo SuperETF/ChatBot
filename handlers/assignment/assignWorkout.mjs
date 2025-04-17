@@ -6,6 +6,7 @@ import {
 } from "../../utils/parseDateUtils.mjs";
 
 export default async function assignWorkout(kakaoId, utterance, res) {
+  // 1. 트레이너 인증
   const { data: trainer } = await supabase
     .from("trainers")
     .select("id")
@@ -16,6 +17,7 @@ export default async function assignWorkout(kakaoId, utterance, res) {
     return res.json(replyText("트레이너 인증 정보가 없습니다."));
   }
 
+  // 2. 이름 및 과제 내용 추출
   const nameMatch = utterance.match(/[가-힣]{2,4}/);
   const title = utterance.replace(nameMatch?.[0], "").trim();
 
@@ -24,6 +26,8 @@ export default async function assignWorkout(kakaoId, utterance, res) {
   }
 
   const name = nameMatch[0];
+
+  // 3. 회원 정보 확인
   const { data: member } = await supabase
     .from("members")
     .select("id")
@@ -35,11 +39,29 @@ export default async function assignWorkout(kakaoId, utterance, res) {
     return res.json(replyText(`${name}님은 당신의 회원이 아니거나 존재하지 않습니다.`));
   }
 
-  // 🔍 자연어 날짜 추출
+  // 4. 날짜 파싱
   const rangeDates = parseDateRangeFromText(utterance);
   const singleDates = parseDateTimeFromText(utterance);
   const scheduleDates = rangeDates.length > 0 ? rangeDates : singleDates;
 
+  // ✅ 날짜 없음 → 로깅 후 종료
+  if (!scheduleDates || scheduleDates.length === 0) {
+    await supabase.from("date_parsing_failures").insert({
+      kakao_id: kakaoId,
+      utterance,
+      note: "날짜 파싱 실패 (assignWorkout)"
+    });
+    return res.json(replyText("⛔ 날짜를 인식하지 못했습니다. 예: '내일 런지 30개', '3일 뒤부터 5일간 팔굽혀펴기' 처럼 입력해주세요."));
+  }
+
+  // ✅ 과거 날짜 차단
+  const today = new Date().toISOString().slice(0, 10);
+  const hasPastDate = scheduleDates.some(d => d.date < today);
+  if (hasPastDate) {
+    return res.json(replyText("❌ 과거 날짜에는 과제를 등록할 수 없습니다. 미래 날짜를 입력해주세요."));
+  }
+
+  // 5. 과제 본문 저장
   const { data: assignment, error } = await supabase
     .from("personal_assignments")
     .insert({
@@ -58,21 +80,27 @@ export default async function assignWorkout(kakaoId, utterance, res) {
 
   console.log("✅ 과제 등록 성공:", assignment);
 
+  // 6. 일정 저장
+  const insertedDates = [];
+
   for (const { date, time } of scheduleDates) {
     const { error: scheduleError } = await supabase
       .from("assignment_schedules")
       .insert({
         assignment_id: assignment.id,
         target_date: date,
-        target_time: time || null // ⚠️ Supabase에 컬럼 추가 필요
+        target_time: time || null
       });
 
-    if (scheduleError) {
-      console.error("❌ 일정 등록 실패:", scheduleError);
-    }
+    if (!scheduleError) insertedDates.push({ date, time });
+    else console.error("❌ 일정 등록 실패:", scheduleError);
+  }
+
+  if (insertedDates.length === 0) {
+    return res.json(replyText("❌ 과제는 저장되었지만 날짜가 저장되지 않았습니다. 다시 시도해주세요."));
   }
 
   return res.json(replyText(
-    `✅ ${name}님에게 과제가 성공적으로 등록되었습니다.\n[${title}]\n📅 지정일: ${scheduleDates.map(d => d.date + (d.time ? ` ${d.time}` : '')).join(", ")}`
+    `✅ ${name}님에게 과제가 성공적으로 등록되었습니다.\n[${title}]\n📅 지정일: ${insertedDates.map(d => d.date + (d.time ? ` ${d.time}` : '')).join(", ")}`
   ));
 }
