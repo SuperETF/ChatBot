@@ -3,7 +3,7 @@ import { supabase } from "../../services/supabase.mjs";
 import { replyText } from "../../utils/reply.mjs";
 
 export default async function registerTrainer(kakaoId, utterance, res) {
-  const cleaned = utterance.replace("전문가", "").trim();
+  const cleaned = utterance.replace("전문가", "전문가 등록", "").trim();
   const nameMatch = cleaned.match(/[가-힣]{2,10}/);
   const phoneMatch = cleaned.match(/(01[016789]\d{7,8})/);
 

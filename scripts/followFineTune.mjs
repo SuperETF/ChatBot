@@ -1,23 +1,29 @@
+// scripts/followFineTune.mjs
 import OpenAI from "openai";
 import "dotenv/config";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// ✅ 여기엔 반드시 ft- 로 시작하는 ID가 들어가야 함
-const fineTuneId = "ftjob-yH9pbk8Uhqmv4wgTocUfCZTm"; // ← 이걸 교체해줘
+export async function followFineTuneJob(jobId) {
+  let modelId = null;
 
-async function run() {
-  try {
-    const events = await openai.fineTuning.jobs.listEvents({ id: fineTuneId });
+  while (true) {
+    const job = await openai.fineTuning.jobs.retrieve(jobId);
 
-    console.log("📡 Fine-tune 상태 추적:");
-    for (const event of events.data.reverse()) {
-      const time = new Date(event.created_at * 1000).toLocaleString();
-      console.log(`[${time}] ${event.message}`);
+    if (job.status === "succeeded") {
+      modelId = job.fine_tuned_model;
+      console.log(`✅ 학습 완료! 모델 ID: ${modelId}`);
+      break;
     }
-  } catch (err) {
-    console.error("❌ 추적 실패:", err.status, err.message || err);
-  }
-}
 
-run();
+    if (job.status === "failed") {
+      console.error("❌ 학습 실패");
+      break;
+    }
+
+    console.log(`⏳ 현재 상태: ${job.status}...`);
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+  }
+
+  return modelId;
+}

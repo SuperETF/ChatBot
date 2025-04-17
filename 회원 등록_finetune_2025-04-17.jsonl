@@ -1,0 +1,11 @@
+{"messages":[{"role":"user","content":"회원등록"},{"role":"assistant","content":"intent: 회원 등록\nhandler: auth\naction: registerTrainerMember"}]}
+{"messages":[{"role":"user","content":"등로크"},{"role":"assistant","content":"intent: 회원 등록\nhandler: auth\naction: registerTrainerMember"}]}
+{"messages":[{"role":"user","content":"등록"},{"role":"assistant","content":"intent: 회원 등록\nhandler: auth\naction: registerTrainerMember"}]}
+{"messages":[{"role":"user","content":"회원"},{"role":"assistant","content":"intent: 회원 등록\nhandler: auth\naction: registerTrainerMember"}]}
+{"messages":[{"role":"user","content":"등록해"},{"role":"assistant","content":"intent: 회원 등록\nhandler: auth\naction: registerTrainerMember"}]}
+{"messages":[{"role":"user","content":"회원"},{"role":"assistant","content":"intent: 회원 등록\nhandler: auth\naction: registerTrainerMember"}]}
+{"messages":[{"role":"user","content":"등록하라고"},{"role":"assistant","content":"intent: 회원 등록\nhandler: auth\naction: registerTrainerMember"}]}
+{"messages":[{"role":"user","content":"회원등록"},{"role":"assistant","content":"intent: 회원 등록\nhandler: auth\naction: registerTrainerMember"}]}
+{"messages":[{"role":"user","content":"등록"},{"role":"assistant","content":"intent: 회원 등록\nhandler: auth\naction: registerTrainer"}]}
+{"messages":[{"role":"user","content":"회원"},{"role":"assistant","content":"intent: 회원 등록\nhandler: auth\naction: registerTrainerMember"}]}
+{"messages":[{"role":"user","content":"회원등록"},{"role":"assistant","content":"intent: 회원 등록\nhandler: auth\naction: registerTrainerMember"}]}

@@ -1,4 +1,3 @@
-// classifyIntent.mjs
 import { openai } from "../../services/openai.mjs";
 import { supabase } from "../../services/supabase.mjs";
 import { fetchRecentHistory } from "../../utils/fetchHistoryForRAG.mjs";
@@ -9,7 +8,12 @@ const NO_KEYWORDS = ["아니요", "아니", "괜찮아요", "안 할래", "지�
 
 const sessionContext = {};
 
-const FINE_TUNED_INTENT_MODEL = process.env.GPT_MODEL_ID_INTENT; // ✅ .env에서 모델 ID 관리
+// ✅ Intent별 모델 분기
+const modelMap = {
+  "회원 등록": process.env.GPT_MODEL_ID_REGISTRATION_MEMBER,
+  "전문가 등록": process.env.GPT_MODEL_ID_REGISTRATION_TRAINER,
+  "운동 예약": process.env.GPT_MODEL_ID_BOOKING,
+};
 
 export default async function classifyIntent(utterance, kakaoId) {
   const clean = utterance.normalize("NFKC").trim();
@@ -79,7 +83,7 @@ export default async function classifyIntent(utterance, kakaoId) {
     return { intent: "운동 특이사항", handler: "workout", action: "reportWorkoutCondition" };
   }
 
-  // 🧠 Fine-tuned GPT-3.5 fallback 처리
+  // 🧠 GPT fallback
   const prompt = `다음 문장을 intent, handler, action으로 분류해줘.\n아래 형식으로 JSON만 출력해:\n{\n  "intent": "과제 등록",\n  "handler": "assignment",\n  "action": "assignWorkout"\n}\n\n문장: "${utterance}"`;
 
   try {
@@ -95,7 +99,7 @@ export default async function classifyIntent(utterance, kakaoId) {
     ];
 
     const response = await openai.chat.completions.create({
-      model: FINE_TUNED_INTENT_MODEL,
+      model: process.env.GPT_MODEL_ID_INTENT, // 🔄 fallback용 통합 모델 사용
       messages,
       temperature: 0
     });
@@ -115,7 +119,7 @@ export default async function classifyIntent(utterance, kakaoId) {
       action: result.action,
       error_message: null,
       note: "GPT-3.5 fine-tune fallback",
-      model_used: FINE_TUNED_INTENT_MODEL
+      model_used: process.env.GPT_MODEL_ID_INTENT
     });
 
     return result;
