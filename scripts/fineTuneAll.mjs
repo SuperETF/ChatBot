@@ -1,51 +1,42 @@
-import { exportFailuresToJsonl } from './exportFailuresToJsonl.mjs';
-import { requestFineTune } from './fineTuneModel.mjs';
-import { followFineTuneJob } from './followFineTune.mjs';
-import { updateEnvFile } from './updateEnv.mjs';
-import { recordTrainingResult } from './recordTrainingResult.mjs';
-import fs from 'fs';
+// ✅ fineTuneAll.mjs (OpenAI CLI v4 기준 버전)
+// intent별 .jsonl 학습 파일을 순차적으로 fine-tune 실행하고 모델 ID 출력
 
-// ✅ 1. 인텐트 파라미터 파싱
-const intent = process.argv.find(arg => arg.startsWith('--intent='))?.split('=')[1];
+import { execSync } from "child_process";
+import fs from "fs";
+import path from "path";
 
-if (!intent) {
-  console.error("❗ --intent=회원 등록 이런 식으로 intent를 입력해주세요.");
-  process.exit(1);
+// ✅ CLI 경로 (which openai 로 확인된 경로로 수정 가능)
+const openaiCmd = "openai"; // 전역 CLI 설치되어 있다면 이대로 OK
+
+const jobs = [
+  {
+    name: "회원 등록",
+    file: "fallback_registration.jsonl",
+    envKey: "GPT_MODEL_ID_REGISTRATION_MEMBER"
+  },
+  {
+    name: "전문가 등록",
+    file: "fallback_trainer.jsonl",
+    envKey: "GPT_MODEL_ID_REGISTRATION_TRAINER"
+  }
+];
+
+for (const job of jobs) {
+  if (!fs.existsSync(job.file)) {
+    console.warn(`⚠️ ${job.name} 학습용 파일 없음 → ${job.file}`);
+    continue;
+  }
+
+  console.log(`🚀 [${job.name}] 파인튜닝 시작...`);
+  try {
+    const output = execSync(`${openaiCmd} fine_tunes.create -m gpt-3.5-turbo-0125 -t ${job.file}`).toString();
+    const parsed = JSON.parse(output);
+    const modelId = parsed.fine_tuned_model;
+
+    console.log(`✅ [${job.name}] 완료 모델 ID: ${modelId}`);
+    console.log(`👉 .env에 추가: ${job.envKey}=${modelId}\n`);
+  } catch (e) {
+    console.error(`❌ [${job.name}] 파인튜닝 실패:`);
+    console.error(e.message || e);
+  }
 }
-
-console.log(`📦 [1/5] '${intent}' 학습셋을 추출합니다...`);
-
-// ✅ 2. .jsonl 학습셋 생성
-const jsonlPath = await exportFailuresToJsonl(intent);
-
-if (!fs.existsSync(jsonlPath)) {
-  console.error(`❌ 학습셋 파일이 존재하지 않습니다: ${jsonlPath}`);
-  process.exit(1);
-}
-
-console.log(`🚀 [2/5] OpenAI 파인튜닝 요청을 시작합니다...`);
-
-// ✅ 3. 파인튜닝 요청
-const { fileId, jobId } = await requestFineTune(jsonlPath);
-if (!jobId) {
-  console.error("❌ fine-tune 요청 실패: jobId 없음");
-  process.exit(1);
-}
-
-console.log(`⏳ [3/5] 학습 완료를 추적 중입니다...`);
-
-const modelId = await followFineTuneJob(jobId);
-if (!modelId) {
-  console.error("❌ fine-tune 완료 실패: modelId 없음");
-  process.exit(1);
-}
-
-console.log(`🧪 [4/5] .env 파일 업데이트 중...`);
-
-await updateEnvFile(intent, modelId);
-
-console.log(`🧠 [5/5] Supabase fine_tune_jobs 테이블에 결과 저장...`);
-
-await recordTrainingResult({ intent, fileId, jobId, modelId });
-
-console.log(`🎉 '${intent}' intent 파인튜닝 완료 → 모델 ID: ${modelId}`);
