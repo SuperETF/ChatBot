@@ -2,18 +2,20 @@ import { openai } from "../../services/openai.mjs";
 import { supabase } from "../../services/supabase.mjs";
 import { fetchRecentHistory } from "../../utils/fetchHistoryForRAG.mjs";
 import { fetchRecentFallback } from "../../utils/fetchRecentFallback.mjs";
+import "dotenv/config";
 
 const YES_KEYWORDS = ["네", "그래", "응", "좋아", "알겠어", "등록 원해", "등록할게", "진행해"];
 const NO_KEYWORDS = ["아니요", "아니", "괜찮아요", "안 할래", "지금은 아니야"];
 
 const sessionContext = {};
 
-// ✅ Intent별 모델 분기
 const modelMap = {
   "회원 등록": process.env.GPT_MODEL_ID_REGISTRATION_MEMBER,
   "전문가 등록": process.env.GPT_MODEL_ID_REGISTRATION_TRAINER,
   "운동 예약": process.env.GPT_MODEL_ID_BOOKING,
 };
+
+const fallbackModel = process.env.GPT_MODEL_ID_INTENT;
 
 export default async function classifyIntent(utterance, kakaoId) {
   const clean = utterance.normalize("NFKC").trim();
@@ -87,6 +89,11 @@ export default async function classifyIntent(utterance, kakaoId) {
   const prompt = `다음 문장을 intent, handler, action으로 분류해줘.\n아래 형식으로 JSON만 출력해:\n{\n  "intent": "과제 등록",\n  "handler": "assignment",\n  "action": "assignWorkout"\n}\n\n문장: "${utterance}"`;
 
   try {
+    if (!fallbackModel) {
+      console.error("❌ Fallback GPT 모델이 정의되지 않았습니다. .env 파일을 확인하세요.");
+      throw new Error("fallback model not defined");
+    }
+
     const recentHistory = await fetchRecentHistory(kakaoId);
     const recentFallback = await fetchRecentFallback(kakaoId);
 
@@ -99,7 +106,7 @@ export default async function classifyIntent(utterance, kakaoId) {
     ];
 
     const response = await openai.chat.completions.create({
-      model: process.env.GPT_MODEL_ID_INTENT, // 🔄 fallback용 통합 모델 사용
+      model: fallbackModel,
       messages,
       temperature: 0
     });
@@ -119,7 +126,7 @@ export default async function classifyIntent(utterance, kakaoId) {
       action: result.action,
       error_message: null,
       note: "GPT-3.5 fine-tune fallback",
-      model_used: process.env.GPT_MODEL_ID_INTENT
+      model_used: fallbackModel
     });
 
     return result;
@@ -135,7 +142,7 @@ export default async function classifyIntent(utterance, kakaoId) {
       action: null,
       error_message: e.message || null,
       note: "classifyIntent fallback",
-      model_used: "gpt-fallback-error"
+      model_used: fallbackModel || "gpt-fallback-error"
     });
 
     return { intent: "기타", handler: "fallback", action: undefined };
