@@ -1,4 +1,4 @@
-// webhook.mjs 개선: 등록 흐름에서 name/phone 누락 시 등록 방지
+// webhook.mjs 리팩토링 – 멀티턴 중에는 classifyIntent 호출 안 함
 import express from "express";
 import { handlers } from "../handlers/index.mjs";
 import classifyIntent from "../handlers/system/classifyIntent.mjs";
@@ -21,21 +21,27 @@ router.post("/", async (req, res) => {
   const ctx = sessionContext[kakaoId];
 
   try {
+    // 세션 만료 처리
     if (ctx && Date.now() - ctx.timestamp > SESSION_TTL_MS) {
       delete sessionContext[kakaoId];
     }
 
+    // 취소 처리
     if (CANCEL_KEYWORDS.includes(utterance)) {
       delete sessionContext[kakaoId];
       return res.json(replyButton("✅ 진행을 취소했어요. 다시 시작하시겠어요?", ["회원 등록", "트레이너 등록", "홈으로"]));
     }
 
+    // 재시작 유도
     if (RESTART_KEYWORDS.includes(utterance)) {
       return res.json(replyButton("다시 어떤 항목을 등록하시겠어요?", ["회원 등록", "트레이너 등록", "운동 예약"]));
     }
 
-    if (REWIND_KEYWORDS.includes(utterance)) {
-      if (ctx?.intent === "회원 등록") {
+    // 멀티턴 흐름이 존재하면 해당 흐름 내부에서만 처리 (intent 재분류 금지)
+    if (sessionContext[kakaoId]) {
+      const ctx = sessionContext[kakaoId];
+
+      if (REWIND_KEYWORDS.includes(utterance)) {
         if (ctx.step === "askPhone") {
           ctx.step = "askName";
           delete ctx.data.phone;
@@ -46,8 +52,36 @@ router.post("/", async (req, res) => {
           return res.json(replyText("전화번호를 다시 입력해주세요."));
         }
       }
+
+      if (["등록", "등록할게", "확인", "진행해"].includes(utterance)) {
+        if (!ctx.data?.name || !ctx.data?.phone) {
+          return res.json(replyText("등록할 정보가 부족합니다. 이름과 전화번호를 다시 입력해주세요."));
+        }
+        const composedInput = `회원 등록 ${ctx.data.name} ${ctx.data.phone}`;
+        delete sessionContext[kakaoId];
+        return handlers.auth(kakaoId, composedInput, res, "registerTrainerMember", sessionContext);
+      }
+
+      if (ctx.step === "askName") {
+        ctx.data.name = utterance;
+        ctx.step = "askPhone";
+        ctx.timestamp = Date.now();
+        await logMultiTurnStep({ kakaoId, intent: ctx.intent, step: "askName", utterance });
+        return res.json(replyText("전화번호도 입력해주세요."));
+      }
+
+      if (ctx.step === "askPhone") {
+        ctx.data.phone = utterance;
+        ctx.step = "confirmRegister";
+        ctx.timestamp = Date.now();
+        await logMultiTurnStep({ kakaoId, intent: ctx.intent, step: "askPhone", utterance });
+        return res.json(replyButton(`${ctx.data.name}님(${ctx.data.phone})을 등록하시겠습니까?`, ["등록", "취소"]));
+      }
+
+      return res.json(replyText("입력하신 내용을 이해하지 못했어요. 다시 시도해주세요."));
     }
 
+    // 최초 진입 또는 세션이 없는 경우만 분류기 사용
     if (utterance === "회원 등록") {
       sessionContext[kakaoId] = {
         intent: "회원 등록",
@@ -56,36 +90,6 @@ router.post("/", async (req, res) => {
         timestamp: Date.now()
       };
       return res.json(replyText("회원님의 성함을 입력해주세요."));
-    }
-
-    if (["등록", "등록할게", "확인", "진행해"].includes(utterance)) {
-      if (ctx?.intent === "회원 등록") {
-        if (!ctx.data?.name || !ctx.data?.phone) {
-          return res.json(replyText("등록할 정보가 부족합니다. 이름과 전화번호를 다시 입력해주세요."));
-        }
-
-        const composedInput = `회원 등록 ${ctx.data.name} ${ctx.data.phone}`;
-        delete sessionContext[kakaoId];
-
-        return handlers.auth(kakaoId, composedInput, res, "registerTrainerMember", sessionContext);
-      }
-    }
-
-    if (ctx?.intent === "회원 등록") {
-      if (ctx.step === "askName") {
-        ctx.data.name = utterance;
-        ctx.step = "askPhone";
-        ctx.timestamp = Date.now();
-        await logMultiTurnStep({ kakaoId, intent: ctx.intent, step: "askName", utterance });
-        return res.json(replyText("전화번호도 입력해주세요."));
-      }
-      if (ctx.step === "askPhone") {
-        ctx.data.phone = utterance;
-        ctx.step = "confirmRegister";
-        ctx.timestamp = Date.now();
-        await logMultiTurnStep({ kakaoId, intent: ctx.intent, step: "askPhone", utterance });
-        return res.json(replyButton(`${ctx.data.name}님(${ctx.data.phone})을 등록하시겠습니까?`, ["등록", "취소"]));
-      }
     }
 
     const { intent, handler, action } = await classifyIntent(utterance, kakaoId);
