@@ -91,7 +91,7 @@ router.post("/", async (req, res) => {
 
        // ✅ 오늘 과제 (회원)
        if (/오늘\s*과제|과제\s*있어/.test(utterance)) {
-        return assignment(kakaoId, utterance, res, "getTodayAssignment");
+        return assignment(kakaoId, utterance, res, "getTodayAssignment"); // ✅
       }
   
       // ✅ 예정 과제 (회원)
