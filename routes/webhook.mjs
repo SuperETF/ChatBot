@@ -89,29 +89,30 @@ router.post("/", async (req, res) => {
       return reservePersonal(kakaoId, utterance, res);
     }
 
-    // ✅ 과제 부여
-    if (/과제|런지|스쿼트|플랭크|버피|운동/.test(utterance) && /[가-힣]{2,10}/.test(utterance)) {
-      return assignment(kakaoId, utterance, res, "assignWorkout");
-    }
-
-    // ✅ 오늘 과제
-    if (/오늘\s*과제|과제\s*있어/.test(utterance)) {
-      return assignment(kakaoId, utterance, res, "getTodayAssignment");
-    }
-
-    // ✅ 예정 과제
-    if (/예정된\s*과제|앞으로/.test(utterance)) {
-      return assignment(kakaoId, utterance, res, "getUpcomingAssignments");
-    }
-
-    // ✅ 과제 시작/종료
-    if (/과제\s*시작/.test(utterance)) {
-      return assignment(kakaoId, utterance, res, "startAssignment");
-    }
-
-    if (/과제\s*종료/.test(utterance)) {
-      return assignment(kakaoId, utterance, res, "finishAssignment");
-    }
+       // ✅ 오늘 과제 (회원)
+       if (/오늘\s*과제|과제\s*있어/.test(utterance)) {
+        return assignment(kakaoId, utterance, res, "getTodayAssignment");
+      }
+  
+      // ✅ 예정 과제 (회원)
+      if (/예정된\s*과제|앞으로/.test(utterance)) {
+        return assignment(kakaoId, utterance, res, "getUpcomingAssignments");
+      }
+  
+      // ✅ 과제 시작/종료
+      if (/과제\s*시작/.test(utterance)) {
+        return assignment(kakaoId, utterance, res, "startAssignment");
+      }
+  
+      if (/과제\s*종료/.test(utterance)) {
+        return assignment(kakaoId, utterance, res, "finishAssignment");
+      }
+  
+      // ✅ 과제 부여 (트레이너만)
+      if (/^[가-힣]{2,10}(님|씨)?\s+(런지|스쿼트|플랭크|버피|과제|숙제)/.test(utterance)) {
+        return assignment(kakaoId, utterance, res, "assignWorkout");
+      }
+  
 
     // ❌ fallback
     return fallback(utterance, kakaoId, res, "none", "none");
