@@ -6,6 +6,7 @@ import finishAssignment from "./finishAssignment.mjs";
 import generateRoutine from "./generateRoutinePreview.mjs";
 import assignRoutineToMember from "./assignRoutineToMember.mjs";
 import { replyText } from "../../utils/reply.mjs";
+import { supabase } from "../../services/supabase.mjs";
 
 /**
  * 과제 관련 액션 dispatcher
@@ -42,14 +43,34 @@ export default async function assignment(kakaoId, utterance, res, action) {
     }
 
     case "assignRoutineToMember": {
-      // 예: 홍길동에게 마지막으로 생성한 루틴을 바로 배정
-      const routine = generateRoutine("상체"); // ⚠️ 단순 예시. 상태관리 사용 가능
-      const trainer = await getTrainerByKakao(kakaoId);
-      const member = await getMemberByNameAndTrainer("홍길동", trainer.id);
-      const today = new Date();
+      const routine = generateRoutine("상체"); // 최근 루틴 기반 or 하드코딩
+
+      const { data: trainer } = await supabase
+        .from("trainers")
+        .select("id")
+        .eq("kakao_id", kakaoId)
+        .maybeSingle();
+
+      if (!trainer) {
+        return res.json(replyText("트레이너 인증이 필요합니다."));
+      }
+
+      const { data: member } = await supabase
+        .from("members")
+        .select("id")
+        .eq("name", "홍길동")
+        .eq("trainer_id", trainer.id)
+        .maybeSingle();
+
+      if (!member) {
+        return res.json(replyText("홍길동님은 등록된 회원이 아닙니다."));
+      }
+
+      const now = new Date();
       const dates = Array.from({ length: 3 }, (_, i) =>
-        new Date(today.setDate(today.getDate() + i + 1)).toISOString().slice(0, 10)
+        new Date(now.getTime() + (i + 1) * 86400000).toISOString().slice(0, 10)
       );
+
       return assignRoutineToMember(trainer.id, member.id, routine, dates, res);
     }
 
