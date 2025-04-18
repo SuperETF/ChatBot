@@ -36,10 +36,17 @@ export default async function registerTrainerMember(kakaoId, utterance, res, ses
     const gptRes = await openai.chat.completions.create({
       model: ACTION_MODEL_ID,
       messages: [
-        { role: "system", content: "트레이너가 회원을 등록합니다. 이름과 전화번호를 추출해주세요." },
-        { role: "user", content: utterance }
+        {
+          role: "system",
+          content: "트레이너가 회원을 등록합니다. 사용자의 입력에서 name과 phone을 추출해주세요. 반드시 JSON 형식으로만 응답하세요. 예시: {\"name\": \"홍길동\", \"phone\": \"01012345678\"}"
+        },
+        {
+          role: "user",
+          content: utterance
+        }
       ]
     });
+    
     const parsed = JSON.parse(gptRes.choices[0].message.content.trim());
     name = parsed.name;
     phone = parsed.phone;
