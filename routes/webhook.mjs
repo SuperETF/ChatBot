@@ -16,6 +16,8 @@ import { sessionContext as reserveSession } from "../handlers/booking/reservePer
 import { sessionContext as cancelSession } from "../handlers/booking/cancelPersonal.mjs";
 import { sessionContext as statusSession } from "../handlers/booking/showSlotStatus.mjs";
 
+import assignment from "../handlers/assignment/index.mjs";
+
 const router = express.Router();
 
 router.post("/", async (req, res) => {
@@ -57,7 +59,7 @@ router.post("/", async (req, res) => {
       return auth.auth(kakaoId, utterance, res, "listMembers");
     }
 
-    // ✅ 내 예약 내역 보기
+    // ✅ 내 예약 내역
     if (/예약\s*내역|내\s*예약|운동\s*몇\s*시|레슨\s*몇\s*시/.test(utterance)) {
       return showMyReservations(kakaoId, utterance, res);
     }
@@ -67,17 +69,41 @@ router.post("/", async (req, res) => {
       return cancelPersonal(kakaoId, utterance, res);
     }
 
-    // ✅ 예약 현황 보기
+    // ✅ 예약 현황
     if (/몇\s*명|현황|자리\s*있어/.test(utterance) && /\d{1,2}시/.test(utterance)) {
       return showSlotStatus(kakaoId, utterance, res);
     }
 
-    // ✅ 개인 운동 예약 요청
+    // ✅ 운동 예약
     if (/운동|예약/.test(utterance) && /\d{1,2}시/.test(utterance)) {
       return reservePersonal(kakaoId, utterance, res);
     }
 
-    // ❌ fallback
+    // ✅ 과제 부여
+    if (/과제|런지|스쿼트|플랭크|버피|운동/.test(utterance) && /[가-힣]{2,10}/.test(utterance)) {
+      return assignment(kakaoId, utterance, res, "assignWorkout");
+    }
+
+    // ✅ 오늘 과제
+    if (/오늘\s*과제|과제\s*있어/.test(utterance)) {
+      return assignment(kakaoId, utterance, res, "getTodayAssignment");
+    }
+
+    // ✅ 예정 과제
+    if (/예정된\s*과제|앞으로/.test(utterance)) {
+      return assignment(kakaoId, utterance, res, "getUpcomingAssignments");
+    }
+
+    // ✅ 과제 시작/종료
+    if (/과제\s*시작/.test(utterance)) {
+      return assignment(kakaoId, utterance, res, "startAssignment");
+    }
+
+    if (/과제\s*종료/.test(utterance)) {
+      return assignment(kakaoId, utterance, res, "finishAssignment");
+    }
+
+    // ❌ fallback 처리
     return fallback(utterance, kakaoId, res, "none", "none");
 
   } catch (error) {
@@ -89,6 +115,7 @@ router.post("/", async (req, res) => {
       error_message: error.message,
       note: "webhook catch"
     });
+
     return res.json(replyText("🚧 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."));
   }
 });

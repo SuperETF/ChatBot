@@ -1,4 +1,3 @@
-// handlers/assignment/startAssignment.mjs
 import { supabase } from "../../services/supabase.mjs";
 import { replyText } from "../../utils/reply.mjs";
 import { findTodayAssignment } from "../../utils/assignmentHelper.mjs";

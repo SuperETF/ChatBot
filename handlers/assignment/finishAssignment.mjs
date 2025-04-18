@@ -1,4 +1,3 @@
-// handlers/assignment/finishAssignment.mjs
 import { supabase } from "../../services/supabase.mjs";
 import { replyText } from "../../utils/reply.mjs";
 import { findTodayAssignment } from "../../utils/assignmentHelper.mjs";
@@ -47,6 +46,6 @@ export default async function finishAssignment(kakaoId, res) {
   const seconds = Math.floor((durationMs / 1000) % 60);
 
   return res.json(replyText(
-    `✅ 과제 [${assignment.title}] 완료되었습니다!\n⏱️ 총 소요 시간: ${minutes}분 ${seconds}초\n고생 많으셨습니다 💪`
+    `✅ 과제 [${assignment.title}] 완료되었습니다!\n⏱️ 소요 시간: ${minutes}분 ${seconds}초\n고생 많으셨습니다 💪`
   ));
 }
