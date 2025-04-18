@@ -33,7 +33,7 @@ export default async function assignment(kakaoId, utterance, res, action) {
       return finishAssignment(kakaoId, res);
 
       case "generateRoutinePreview": {
-        const routine = await generateRoutine(utterance); // ✅ await 필수
+        const routine = await generateRoutine(kakaoId, utterance, res); // ✅ await 필수
       
         const { data: trainer } = await supabase
           .from("trainers")
