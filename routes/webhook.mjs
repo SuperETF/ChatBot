@@ -113,7 +113,43 @@ if (/과제\s*종료|종료하기/.test(utterance)) {
 if (/^[가-힣]{2,10}(님|씨)?\s+(런지|스쿼트|플랭크|버피|과제|숙제)/.test(utterance)) {
   return assignment(kakaoId, utterance, res, "assignWorkout");
 }
+// ✅ 루틴 생성 → 트레이너가 확인 후 회원에게 과제로 등록
+if (/루틴.*(만들|추천|생성|등록)/.test(utterance) || /운동 루틴/.test(utterance)) {
+  // 루틴은 즉시 등록하는 게 아니라 "미리보기" 출력만 한다면
+  const routine = generateRoutine(utterance); // ["푸시업 20개", ...]
+  return res.json({
+    text: `🤖 AI 루틴 추천:\n- ${routine.join("\n- ")}`,
+    quickReplies: [
+      { label: "홍길동에게 배정", action: "message", messageText: "홍길동 루틴 배정" }
+    ]
+  });
+}
 
+// ✅ 트레이너가 회원에게 배정 명령 시
+if (/([가-힣]{2,10})\s+루틴\s+배정/.test(utterance)) {
+  const name = utterance.match(/([가-힣]{2,10})/)[1];
+  const routine = generateRoutine("상체"); // 또는 최근 생성된 goal 활용
+
+  const { data: trainer } = await supabase
+    .from("trainers")
+    .select("id")
+    .eq("kakao_id", kakaoId)
+    .maybeSingle();
+
+  const { data: member } = await supabase
+    .from("members")
+    .select("id")
+    .eq("name", name)
+    .eq("trainer_id", trainer.id)
+    .maybeSingle();
+
+  const today = new Date();
+  const dates = Array.from({ length: 3 }, (_, i) =>
+    new Date(today.setDate(today.getDate() + i + 1)).toISOString().slice(0, 10)
+  );
+
+  return assignRoutineToMember(trainer.id, member.id, routine, dates, res);
+}
     // ❌ fallback
     return fallback(utterance, kakaoId, res, "none", "none");
 

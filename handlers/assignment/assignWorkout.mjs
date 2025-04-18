@@ -50,7 +50,7 @@ export default async function assignWorkout(kakaoId, utterance, res) {
       utterance,
       note: "날짜 파싱 실패 (assignWorkout)"
     });
-    return res.json(replyText("날짜를 인식하지 못했습니다. 예: '내일 런지 30개'처럼 입력해주세요."));
+    return res.json(replyText("날짜를 인식하지 못했습니다."));
   }
 
   const today = new Date().toISOString().slice(0, 10);
