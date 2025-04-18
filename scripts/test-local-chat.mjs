@@ -1,4 +1,3 @@
-// scripts/test-local-chat.mjs //node scripts/test-local-chat.mjs
 import fetch from "node-fetch";
 
 const KAKAO_ID = "test-user-id-001";
@@ -18,12 +17,14 @@ const simulateChat = async (utterances = []) => {
       })
     });
     const json = await res.json();
-
     console.log("🟢 응답:\n", JSON.stringify(json, null, 2), "\n");
-    await new Promise(r => setTimeout(r, 500)); // 간격
+    await new Promise(r => setTimeout(r, 500));
   }
 };
-//node scripts/test-local-chat.mjs
-await simulateChat([
-  "전문가 김복두 01012345678 0412"
-]);
+
+// node scripts/test-local-chat.mjs
+(async () => {
+  await simulateChat([
+    "전문가 채정욱 01012345678 0412"
+  ]);
+})();
