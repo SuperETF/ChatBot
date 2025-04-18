@@ -1,4 +1,4 @@
-// handlers/auth/registerTrainerMember.mjs
+// handlers/auth/registerTrainerMember.mjs (최종 안정화 버전)
 import { openai } from "../../services/openai.mjs";
 import { supabase } from "../../services/supabase.mjs";
 import { replyText, replyButton } from "../../utils/reply.mjs";
@@ -14,6 +14,7 @@ export default async function registerTrainerMember(kakaoId, utterance, res, ses
     timestamp: Date.now()
   };
 
+  // 🔁 되돌리기 처리
   if (["이전", "뒤로", "다시"].includes(utterance.trim())) {
     if (ctx.step === "askPhone") {
       ctx.step = "askName";
@@ -26,11 +27,13 @@ export default async function registerTrainerMember(kakaoId, utterance, res, ses
     }
   }
 
+  // ❌ 취소 처리
   if (["아니요", "취소할래", "등록 안 할래", "취소"].includes(utterance.trim())) {
     delete sessionContext[kakaoId];
     return res.json(replyButton("✅ 진행을 취소했어요. 다시 시작하시겠어요?", ["회원 등록", "트레이너 등록", "홈으로"]));
   }
 
+  // ✅ GPT 응답 파싱 시도
   let name = null, phone = null;
   try {
     const gptRes = await openai.chat.completions.create({
@@ -40,20 +43,17 @@ export default async function registerTrainerMember(kakaoId, utterance, res, ses
           role: "system",
           content: "트레이너가 회원을 등록합니다. 사용자의 입력에서 name과 phone을 추출해주세요. 반드시 JSON 형식으로만 응답하세요. 예시: {\"name\": \"홍길동\", \"phone\": \"01012345678\"}"
         },
-        {
-          role: "user",
-          content: utterance
-        }
+        { role: "user", content: utterance }
       ]
     });
-    
-    const parsed = JSON.parse(gptRes.choices[0].message.content.trim());
+    const parsed = JSON.parse(gptRes.choices[0].message.content.trim().replace(/```json|```/g, ""));
     name = parsed.name;
     phone = parsed.phone;
   } catch (e) {
     console.error("❌ GPT 응답 파싱 실패:", e);
   }
 
+  // ✅ GPT로부터 추출 성공한 경우 → 바로 confirm 단계로 이동
   if (name && phone) {
     ctx.data.name = name;
     ctx.data.phone = phone;
@@ -61,10 +61,10 @@ export default async function registerTrainerMember(kakaoId, utterance, res, ses
     sessionContext[kakaoId] = ctx;
 
     await logMultiTurnStep({ kakaoId, intent: ctx.intent, step: "confirm", utterance });
-
-    return res.json(replyButton(`${ctx.data.name}님 (${ctx.data.phone})을 회원으로 등록할까요?`, ["등록", "취소"]));
+    return res.json(replyButton(`${name}님 (${phone})을 회원으로 등록할까요?`, ["등록", "취소"]));
   }
 
+  // 📥 멀티턴 수동 입력 처리
   if (ctx.step === "askName") {
     ctx.data.name = utterance;
     ctx.step = "askPhone";
@@ -82,9 +82,10 @@ export default async function registerTrainerMember(kakaoId, utterance, res, ses
     ctx.step = "confirm";
     sessionContext[kakaoId] = ctx;
     await logMultiTurnStep({ kakaoId, intent: ctx.intent, step: "askPhone", utterance });
-    return res.json(replyButton(`${ctx.data.name}님 (${ctx.data.phone})을 등록할까요?`, ["등록", "취소"]));
+    return res.json(replyButton(`${ctx.data.name}님 (${ctx.data.phone})을 회원으로 등록할까요?`, ["등록", "취소"]));
   }
 
+  // ✅ 등록 확정 처리
   if (["등록", "등록할게", "확인", "네", "진행해"].includes(utterance.trim())) {
     const { name, phone } = ctx.data;
 
@@ -110,6 +111,7 @@ export default async function registerTrainerMember(kakaoId, utterance, res, ses
       .maybeSingle();
 
     if (existing) {
+      delete sessionContext[kakaoId];
       if (existing.trainer_id === trainer.id) {
         return res.json(replyText(`${name}님은 이미 등록된 회원입니다.`));
       } else {
