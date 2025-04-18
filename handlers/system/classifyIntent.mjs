@@ -1,101 +1,100 @@
-import { openai } from "../../services/openai.mjs";
 import { supabase } from "../../services/supabase.mjs";
-import { fetchRecentHistory } from "../../utils/fetchHistoryForRAG.mjs";
-import { fetchRecentFallback } from "../../utils/fetchRecentFallback.mjs";
+import { replyText } from "../../utils/reply.mjs";
+import { parseDateWithFallback } from "../../utils/parseDateWithFallback.mjs";
 
-const fallbackModel = process.env.GPT_MODEL_ID_INTENT;
-const AM_PM_KEYWORDS = ["오전", "오후"];
+export default async function assignWorkout(kakaoId, utterance, res) {
+  // ✅ 트레이너 인증
+  const { data: trainer } = await supabase
+    .from("trainers")
+    .select("id")
+    .eq("kakao_id", kakaoId)
+    .maybeSingle();
 
-export default async function classifyIntent(utterance, kakaoId) {
-  const clean = utterance.normalize("NFKC").trim();
-
-  // ✅ 등록 관련
-  if (/^전문가\s+[가-힣]{2,10}\s+01[016789][0-9]{7,8}\s+\d{4}$/.test(clean)) {
-    return { intent: "전문가 등록", handler: "auth", action: "registerTrainer" };
-  }
-  if (/^회원\s+[가-힣]{2,10}\s+01[016789][0-9]{7,8}\s+\d{4}$/.test(clean)) {
-    return { intent: "회원 등록", handler: "auth", action: "registerTrainerMember" };
-  }
-  if (/^[가-힣]{2,10}\s+01[016789][0-9]{7,8}\s+\d{4}$/.test(clean)) {
-    return { intent: "회원 본인 등록", handler: "auth", action: "registerMember" };
+  if (!trainer) {
+    return res.json(replyText("트레이너 인증 정보가 없습니다. 먼저 전문가 등록을 진행해주세요."));
   }
 
-  // ✅ 오전/오후 확인 응답
-  if (AM_PM_KEYWORDS.includes(clean)) {
-    return { intent: "시간 확인", handler: "booking", action: "confirmPendingTime" };
+  // ✅ 이름 추출
+  const nameMatch = utterance.match(/[가-힣]{2,10}(님|씨|선생님)?/);
+  const name = nameMatch?.[0]?.replace(/(님|씨|선생님)/g, "");
+
+  if (!name) {
+    return res.json(replyText("회원 이름을 포함해서 입력해주세요. 예: 김복두 런지 30개"));
   }
 
-  // ✅ 예약 관련
-  if (/\d{1,2}시/.test(clean) && /운동|예약/.test(clean)) {
-    return { intent: "개인 운동 예약", handler: "booking", action: "reservePersonal" };
-  }
-  if (/예약\s*내역|내\s*예약|운동\s*몇\s*시|레슨\s*몇\s*시/.test(clean)) {
-    return { intent: "예약 내역 조회", handler: "booking", action: "showMyReservations" };
-  }
-  if (/취소/.test(clean) && /\d{1,2}시/.test(clean)) {
-    return { intent: "예약 취소", handler: "booking", action: "cancelPersonal" };
-  }
-  if (/몇\s*명|현황|자리\s*있어/.test(clean) && /\d{1,2}시/.test(clean)) {
-    return { intent: "예약 현황", handler: "booking", action: "showSlotStatus" };
+  // ✅ 과제명 추출
+  const title = utterance.replace(nameMatch[0], "").trim();
+  if (title.length < 2) {
+    return res.json(replyText("과제명을 포함해주세요. 예: 런지 30개"));
   }
 
-  // ✅ fallback GPT 분류
-  const prompt = `다음 문장을 intent, handler, action으로 분류해줘.\n아래 형식으로 JSON만 출력해:\n{\n  "intent": "과제 등록",\n  "handler": "assignment",\n  "action": "assignWorkout"\n}\n\n문장: "${utterance}"`;
+  // ✅ 회원 존재 확인
+  const { data: member } = await supabase
+    .from("members")
+    .select("id")
+    .eq("name", name)
+    .eq("trainer_id", trainer.id)
+    .maybeSingle();
 
-  try {
-    if (!fallbackModel) {
-      console.warn("⚠️ fallbackModel ID 미정의 → fallback 처리됨");
-      return { intent: "기타", handler: "fallback", action: undefined };
-    }
+  if (!member) {
+    return res.json(replyText(`${name}님은 당신의 회원이 아니거나 존재하지 않습니다.`));
+  }
 
-    const recentHistory = await fetchRecentHistory(kakaoId);
-    const recentFallback = await fetchRecentFallback(kakaoId);
+  // ✅ 날짜 추출
+  const parsedDates = await parseDateWithFallback(utterance);
+  const flatDates = parsedDates.flat().filter(Boolean);
 
-    const messages = [
-      {
-        role: "system",
-        content: `🧠 최근 대화 기록:\n${recentHistory.join("\n")}\n\n🔁 이전 fallback 로그:\n${recentFallback.join("\n")}`
-      },
-      { role: "user", content: prompt }
-    ];
-
-    const response = await openai.chat.completions.create({
-      model: fallbackModel,
-      messages,
-      temperature: 0
-    });
-
-    const result = JSON.parse(response.choices[0].message.content.trim());
-
-    if (!result.intent || !result.handler) throw new Error("GPT fallback: intent 또는 handler 누락");
-
-    result.action = result.action || result.handler;
-
-    await supabase.from("fallback_logs").insert({
+  if (!flatDates || flatDates.length === 0) {
+    await supabase.from("date_parsing_failures").insert({
       kakao_id: kakaoId,
       utterance,
-      intent: result.intent,
-      handler: result.handler,
-      action: result.action,
-      error_message: null,
-      note: "GPT-3.5 fallback (intent)",
-      model_used: fallbackModel
+      note: "날짜 파싱 실패 (assignWorkout)"
     });
-
-    return result;
-  } catch (e) {
-    console.warn("⚠️ GPT fallback intent 분류 실패:", e.message);
-    await supabase.from("fallback_logs").insert({
-      kakao_id: kakaoId,
-      utterance,
-      intent: "기타",
-      handler: "fallback",
-      action: null,
-      error_message: e.message || null,
-      note: "classifyIntent fallback",
-      model_used: fallbackModel || "gpt-fallback-error"
-    });
-
-    return { intent: "기타", handler: "fallback", action: undefined };
+    return res.json(replyText("날짜를 인식하지 못했습니다. 예: '내일 런지 30개'처럼 입력해주세요."));
   }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const hasPast = flatDates.some(d => d.date < today);
+  if (hasPast) {
+    return res.json(replyText("과거 날짜에는 과제를 등록할 수 없습니다. 미래 날짜를 입력해주세요."));
+  }
+
+  // ✅ 과제 등록
+  const { data: assignment, error } = await supabase
+    .from("personal_assignments")
+    .insert({
+      member_id: member.id,
+      trainer_id: trainer.id,
+      title,
+      status: "대기"
+    })
+    .select()
+    .single();
+
+  if (error || !assignment) {
+    console.error("과제 저장 실패:", error);
+    return res.json(replyText("과제 저장 중 문제가 발생했습니다. 다시 시도해주세요."));
+  }
+
+  // ✅ 스케줄 등록
+  const insertedDates = [];
+  for (const { date, time } of flatDates) {
+    const { error: scheduleError } = await supabase
+      .from("assignment_schedules")
+      .insert({
+        assignment_id: assignment.id,
+        target_date: date,
+        target_time: time || null
+      });
+    if (!scheduleError) insertedDates.push({ date, time });
+  }
+
+  if (insertedDates.length === 0) {
+    return res.json(replyText("과제는 저장되었지만 날짜 저장에 실패했습니다. 다시 시도해주세요."));
+  }
+
+  const dateSummary = insertedDates.map(d => `${d.date}${d.time ? ` ${d.time}` : ""}`).join(", ");
+  return res.json(replyText(
+    `✅ ${name}님에게 과제가 등록되었습니다.\n📌 [${title}]\n📅 일정: ${dateSummary}`
+  ));
 }
