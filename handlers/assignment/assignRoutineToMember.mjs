@@ -8,7 +8,7 @@ import { replyText } from "../../utils/reply.mjs";
  * @param {string[]} routineList ["푸시업 20개", "플랭크 1분"]
  * @param {string[]} dateList ["2025-04-21", "2025-04-22"]
  */
-export async function assignRoutineToMember(trainerId, memberId, routineList, dateList, res) {
+export default async function assignRoutineToMember(trainerId, memberId, routineList, dateList, res) {
   const assigned = [];
 
   for (const title of routineList) {
