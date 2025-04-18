@@ -145,7 +145,7 @@ router.post("/", async (req, res) => {
       return assignRoutineToMember(trainer.id, member.id, routine, dates, res);
     }
 
-    // ❌ fallback
+    // ❌ fallbac
     return fallback(utterance, kakaoId, res, "none", "none");
 
   } catch (error) {
