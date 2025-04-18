@@ -9,7 +9,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-const filePath = "fallback_registration.jsonl";
+const filePath = "fallback_intent.jsonl";
 
 try {
   console.log("📤 OpenAI 파일 업로드 중...");

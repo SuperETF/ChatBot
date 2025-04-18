@@ -1,4 +1,3 @@
-// webhook.mjs
 import express from "express";
 import { handlers } from "../handlers/index.mjs";
 import classifyIntent from "../handlers/system/classifyIntent.mjs";
@@ -11,6 +10,9 @@ const router = express.Router();
 const sessionContext = {};
 const SESSION_TTL_MS = 2 * 60 * 1000;
 
+const CANCEL_KEYWORDS = ["안 할래", "취소", "그만", "등록 안 해"];
+const REWIND_KEYWORDS = ["이전", "뒤로", "다시"];
+
 router.post("/", async (req, res) => {
   const utterance = req.body.userRequest?.utterance?.trim();
   const kakaoId = req.body.userRequest?.user?.id;
@@ -21,15 +23,34 @@ router.post("/", async (req, res) => {
   try {
     const ctx = sessionContext[kakaoId];
     if (ctx && Date.now() - ctx.timestamp > SESSION_TTL_MS) {
-      sessionContext[kakaoId] = null;
+      delete sessionContext[kakaoId];
     }
 
-    if (["안 할래", "취소", "그만", "등록 안 해"].includes(utterance)) {
-      sessionContext[kakaoId] = null;
-      return res.json(replyText("진행을 취소했어요. 언제든지 다시 시작하실 수 있어요."));
+    // ✅ [1] 취소 처리
+    if (CANCEL_KEYWORDS.includes(utterance)) {
+      delete sessionContext[kakaoId];
+      return res.json(replyButton(
+        "❌ 진행을 취소했어요.\n다시 시작하시겠어요?",
+        ["회원 등록", "트레이너 등록", "홈으로"]
+      ));
     }
 
-    // 🆕 회원 등록 멀티턴 진입 처리
+    // ✅ [2] 뒤로/이전 흐름 처리
+    if (REWIND_KEYWORDS.includes(utterance)) {
+      if (ctx?.intent === "회원 등록") {
+        if (ctx.step === "askPhone") {
+          ctx.step = "askName";
+          delete ctx.data.phone;
+          return res.json(replyText("이름을 다시 입력해주세요."));
+        }
+        if (ctx.step === "confirmRegister") {
+          ctx.step = "askPhone";
+          return res.json(replyText("전화번호를 다시 입력해주세요."));
+        }
+      }
+    }
+
+    // ✅ [3] 회원 등록 멀티턴 진입 처리
     if (utterance === "회원 등록") {
       sessionContext[kakaoId] = {
         intent: "회원 등록",
@@ -40,14 +61,22 @@ router.post("/", async (req, res) => {
       return res.json(replyText("회원님의 성함을 입력해주세요."));
     }
 
+    // ✅ [4] 멀티턴 → 등록 확정
     if (["등록", "등록할게"].includes(utterance)) {
       const ctx = sessionContext[kakaoId];
       if (ctx?.intent === "회원 등록" && ctx?.data?.name && ctx?.data?.phone) {
-        sessionContext[kakaoId] = null;
-        return handlers.auth(kakaoId, `회원 등록 ${ctx.data.name} ${ctx.data.phone}`, res, "registerTrainerMember");
+        delete sessionContext[kakaoId];
+        return handlers.auth(
+          kakaoId,
+          `회원 등록 ${ctx.data.name} ${ctx.data.phone}`,
+          res,
+          "registerTrainerMember",
+          sessionContext // ✅ context 전달
+        );
       }
     }
 
+    // ✅ [5] 멀티턴 중간단계 처리
     if (ctx?.intent === "회원 등록") {
       if (ctx.step === "askName") {
         ctx.data.name = utterance;
@@ -69,11 +98,12 @@ router.post("/", async (req, res) => {
       }
     }
 
+    // ✅ [6] 일반 intent 분류 → 핸들러 실행
     const { intent, handler, action } = await classifyIntent(utterance, kakaoId);
     console.log("🎯 INTENT 결과:", { intent, handler, action });
 
     if (handlers[handler]) {
-      return await handlers[handler](kakaoId, utterance, res, action);
+      return await handlers[handler](kakaoId, utterance, res, action, sessionContext);
     }
 
     return fallback(utterance, kakaoId, res, handler, action);
