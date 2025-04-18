@@ -3,18 +3,13 @@ import { supabase } from "../../services/supabase.mjs";
 import { fetchRecentHistory } from "../../utils/fetchHistoryForRAG.mjs";
 import { fetchRecentFallback } from "../../utils/fetchRecentFallback.mjs";
 
-const sessionContext = {};
-
-const YES_KEYWORDS = ["네", "그래", "응", "좋아", "알겠어", "등록 원해", "등록할게", "진행해"];
-const NO_KEYWORDS = ["아니요", "아니", "괜찮아요", "안 할래", "지금은 아니야"];
-const AM_PM_KEYWORDS = ["오전", "오후"];
-
 const fallbackModel = process.env.GPT_MODEL_ID_INTENT;
+const AM_PM_KEYWORDS = ["오전", "오후"];
 
 export default async function classifyIntent(utterance, kakaoId) {
   const clean = utterance.normalize("NFKC").trim();
 
-  // ✅ 인증번호 포함 등록 정규식
+  // ✅ 등록 관련
   if (/^전문가\s+[가-힣]{2,10}\s+01[016789][0-9]{7,8}\s+\d{4}$/.test(clean)) {
     return { intent: "전문가 등록", handler: "auth", action: "registerTrainer" };
   }
@@ -30,35 +25,18 @@ export default async function classifyIntent(utterance, kakaoId) {
     return { intent: "시간 확인", handler: "booking", action: "confirmPendingTime" };
   }
 
-  // ✅ 기본 예약 발화
+  // ✅ 예약 관련
   if (/\d{1,2}시/.test(clean) && /운동|예약/.test(clean)) {
     return { intent: "개인 운동 예약", handler: "booking", action: "reservePersonal" };
   }
-
-  // ✅ 예약 내역 조회
   if (/예약\s*내역|내\s*예약|운동\s*몇\s*시|레슨\s*몇\s*시/.test(clean)) {
     return { intent: "예약 내역 조회", handler: "booking", action: "showMyReservations" };
   }
-
-  // ✅ 예약 취소
   if (/취소/.test(clean) && /\d{1,2}시/.test(clean)) {
     return { intent: "예약 취소", handler: "booking", action: "cancelPersonal" };
   }
-
-  // ✅ 예약 현황
   if (/몇\s*명|현황|자리\s*있어/.test(clean) && /\d{1,2}시/.test(clean)) {
     return { intent: "예약 현황", handler: "booking", action: "showSlotStatus" };
-  }
-
-  // ✅ YES/NO
-  if (NO_KEYWORDS.includes(clean)) {
-    sessionContext[kakaoId] = null;
-    return { intent: "기타", handler: "fallback" };
-  }
-
-  if (YES_KEYWORDS.includes(clean)) {
-    const last = sessionContext[kakaoId];
-    return last?.handler ? last : { intent: "기타", handler: "fallback" };
   }
 
   // ✅ fallback GPT 분류
@@ -90,8 +68,8 @@ export default async function classifyIntent(utterance, kakaoId) {
     const result = JSON.parse(response.choices[0].message.content.trim());
 
     if (!result.intent || !result.handler) throw new Error("GPT fallback: intent 또는 handler 누락");
+
     result.action = result.action || result.handler;
-    sessionContext[kakaoId] = result;
 
     await supabase.from("fallback_logs").insert({
       kakao_id: kakaoId,
@@ -107,8 +85,6 @@ export default async function classifyIntent(utterance, kakaoId) {
     return result;
   } catch (e) {
     console.warn("⚠️ GPT fallback intent 분류 실패:", e.message);
-    sessionContext[kakaoId] = null;
-
     await supabase.from("fallback_logs").insert({
       kakao_id: kakaoId,
       utterance,
