@@ -105,16 +105,15 @@ router.post("/", async (req, res) => {
     }
 
     // ✅ 루틴 생성 요청
-    if (/루틴.*(만들|추천|생성|등록)/.test(utterance) || /운동 루틴/.test(utterance)) {
+    if (/(루틴.*(추천|생성|등록|만들))|((추천|생성|등록|만들).*(루틴))/.test(utterance)) {
       console.log("✅ 루틴 조건 진입:", utterance);
-
       const routine = generateRoutine(utterance);
-      return res.json({
-        text: `🤖 AI 루틴 추천:\n- ${routine.join("\n- ")}`,
-        quickReplies: [
-          { label: "홍길동에게 배정", action: "message", messageText: "홍길동 루틴 배정" }
-        ]
-      });
+      console.log("📦 루틴 내용:", routine);
+    
+      return res.json(replyText(
+        `🤖 AI 루틴 추천:\n- ${routine.join("\n- ")}`,
+        [{ label: "홍길동에게 배정", action: "message", messageText: "홍길동 루틴 배정" }]
+      ));
     }
 
     // ✅ 루틴 과제 배정
