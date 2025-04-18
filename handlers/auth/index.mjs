@@ -1,35 +1,25 @@
+// handlers/auth/index.mjs (단순화 분기 버전)
 import registerTrainer from "./registerTrainer.mjs";
 import registerMember from "./registerMember.mjs";
 import registerTrainerMember from "./registerTrainerMember.mjs";
 import listMembers from "./listMembers.mjs";
 import { replyText } from "../../utils/reply.mjs";
-import { supabase } from "../../services/supabase.mjs";
 
-export default async function auth(kakaoId, utterance, res, action, sessionContext) {
+export const auth = async (kakaoId, utterance, res, action) => {
   switch (action) {
     case "registerTrainer":
-      return registerTrainer(kakaoId, utterance, res, sessionContext);
+      return registerTrainer(kakaoId, utterance, res);
 
     case "registerTrainerMember":
-    case "registerMember": {
-      // ✅ intent: "회원 등록" 공통 → 역할 분기
-      const { data: trainer } = await supabase
-        .from("trainers")
-        .select("id")
-        .eq("kakao_id", kakaoId)
-        .maybeSingle();
+      return registerTrainerMember(kakaoId, utterance, res);
 
-      if (trainer) {
-        return registerTrainerMember(kakaoId, utterance, res, sessionContext);
-      } else {
-        return registerMember(kakaoId, utterance, res, sessionContext);
-      }
-    }
+    case "registerMember":
+      return registerMember(kakaoId, utterance, res);
 
     case "listMembers":
       return listMembers(kakaoId, utterance, res);
 
     default:
-      return res.json(replyText("등록할 항목을 찾지 못했습니다."));
+      return res.json(replyText("❓ 해당 등록 요청을 처리할 수 없습니다."));
   }
-}
+};
