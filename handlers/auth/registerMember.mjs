@@ -6,7 +6,7 @@ export default async function registerMember(kakaoId, utterance, res) {
   const match = utterance.match(/([가-힣]{2,10})\s+(01[016789][0-9]{7,8})\s+(\d{4})/);
   if (!match) {
     return res.json(replyText(
-      "❗ 회원 등록 형식은 '이름 전화번호 인증번호'입니다.\n예: 김복두 01012345678 0412"
+      "회원 등록 형식은 '이름 전화번호 인증번호'입니다.\n예: 김복두 01012345678 0412"
     ));
   }
 
@@ -30,7 +30,7 @@ export default async function registerMember(kakaoId, utterance, res) {
   }
 
   if (member.code !== inputCode) {
-    return res.json(replyText("❌ 인증번호가 일치하지 않습니다. 다시 확인해주세요."));
+    return res.json(replyText("❌인증번호가 일치하지 않습니다. 다시 확인해주세요."));
   }
 
   const { error } = await supabase
@@ -42,5 +42,5 @@ export default async function registerMember(kakaoId, utterance, res) {
     return res.json(replyText("회원 등록 중 문제가 발생했습니다. 다시 시도해주세요."));
   }
 
-  return res.json(replyText(`✅ ${name}님, 등록이 완료되었습니다.`));
+  return res.json(replyText(`${name}님, 등록이 완료되었습니다.`));
 }
