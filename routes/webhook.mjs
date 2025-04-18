@@ -4,19 +4,18 @@ import fallback from "../handlers/system/fallback.mjs";
 import { supabase } from "../services/supabase.mjs";
 import * as auth from "../handlers/auth/index.mjs";
 
-import reservePersonal from "../handlers/booking/reservePersonal.mjs";
-import cancelPersonal from "../handlers/booking/cancelPersonal.mjs";
-import showSlotStatus from "../handlers/booking/showSlotStatus.mjs";
+// 예약 관련 핸들러
+import reservePersonal, { sessionContext as reserveSession } from "../handlers/booking/reservePersonal.mjs";
+import cancelPersonal, { sessionContext as cancelSession } from "../handlers/booking/cancelPersonal.mjs";
+import showSlotStatus, { sessionContext as statusSession, confirmSlotStatus } from "../handlers/booking/showSlotStatus.mjs";
 import showMyReservations from "../handlers/booking/showMyReservations.mjs";
 import confirmPendingTime from "../handlers/booking/confirmPendingTime.mjs";
 import confirmCancelPendingTime from "../handlers/booking/confirmCancelPendingTime.mjs";
-import confirmSlotStatusPending from "../handlers/booking/confirmSlotStatus.mjs";
 
-import { sessionContext as reserveSession } from "../handlers/booking/reservePersonal.mjs";
-import { sessionContext as cancelSession } from "../handlers/booking/cancelPersonal.mjs";
-import { sessionContext as statusSession } from "../handlers/booking/showSlotStatus.mjs";
-
+// 과제 관련 핸들러
 import assignment from "../handlers/assignment/index.mjs";
+
+import dayjs from "dayjs";
 
 const router = express.Router();
 
@@ -28,13 +27,24 @@ router.post("/", async (req, res) => {
   try {
     // ✅ 오전/오후 응답 처리
     if (/^오전$|^오후$/.test(utterance.trim())) {
-      const r = reserveSession[kakaoId];
-      const c = cancelSession[kakaoId];
-      const s = statusSession[kakaoId];
+      const isAm = utterance.includes("오전");
+      const isPm = utterance.includes("오후");
 
-      if (r?.type === "pending-am-or-pm") return confirmPendingTime(kakaoId, utterance, res);
-      if (c?.type === "pending-cancel-confirmation") return confirmCancelPendingTime(kakaoId, utterance, res);
-      if (s?.type === "pending-status-confirmation") return confirmSlotStatusPending(kakaoId, utterance, res);
+      if (reserveSession[kakaoId]?.type === "pending-am-or-pm") {
+        return confirmPendingTime(kakaoId, utterance, res);
+      }
+
+      if (cancelSession[kakaoId]?.type === "pending-cancel-confirmation") {
+        return confirmCancelPendingTime(kakaoId, utterance, res);
+      }
+
+      if (statusSession[kakaoId]?.type === "pending-status-confirmation") {
+        let time = dayjs(statusSession[kakaoId].base_time);
+        if (isPm && time.hour() < 12) time = time.add(12, "hour");
+        if (isAm && time.hour() >= 12) time = time.subtract(12, "hour");
+        delete statusSession[kakaoId];
+        return confirmSlotStatus(kakaoId, time, res);
+      }
 
       return res.json(replyText("확정할 요청이 없습니다. 다시 시도해주세요."));
     }
@@ -44,17 +54,17 @@ router.post("/", async (req, res) => {
       return auth.auth(kakaoId, utterance, res, "registerTrainer");
     }
 
-    // ✅ 트레이너가 회원 등록
+    // ✅ 회원 등록 (트레이너)
     if (/^회원\s+[가-힣]{2,10}\s+01[016789][0-9]{7,8}\s+\d{4}$/.test(firstLine)) {
       return auth.auth(kakaoId, utterance, res, "registerTrainerMember");
     }
 
-    // ✅ 회원 본인 등록
+    // ✅ 본인 회원 등록
     if (/^[가-힣]{2,10}\s+01[016789][0-9]{7,8}\s+\d{4}$/.test(firstLine)) {
       return auth.auth(kakaoId, utterance, res, "registerMember");
     }
 
-    // ✅ 회원 목록
+    // ✅ 회원 목록 (트레이너)
     if (firstLine === "회원 목록") {
       return auth.auth(kakaoId, utterance, res, "listMembers");
     }
@@ -103,7 +113,7 @@ router.post("/", async (req, res) => {
       return assignment(kakaoId, utterance, res, "finishAssignment");
     }
 
-    // ❌ fallback 처리
+    // ❌ fallback
     return fallback(utterance, kakaoId, res, "none", "none");
 
   } catch (error) {
@@ -115,7 +125,6 @@ router.post("/", async (req, res) => {
       error_message: error.message,
       note: "webhook catch"
     });
-
     return res.json(replyText("🚧 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."));
   }
 });
