@@ -11,6 +11,8 @@ import showSlotStatus, { sessionContext as statusSession, confirmSlotStatus } fr
 import showMyReservations from "../handlers/booking/showMyReservations.mjs";
 import confirmPendingTime from "../handlers/booking/confirmPendingTime.mjs";
 import confirmCancelPendingTime from "../handlers/booking/confirmCancelPendingTime.mjs";
+import generateRoutine from "../handlers/assignment/generateRoutinePreview.mjs";
+
 
 // 과제 관련 핸들러
 import assignment from "../handlers/assignment/index.mjs";
