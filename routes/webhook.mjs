@@ -9,8 +9,6 @@ import showSlotStatus, { sessionContext as statusSession, confirmSlotStatus } fr
 import showMyReservations from "../handlers/booking/showMyReservations.mjs";
 import confirmPendingTime from "../handlers/booking/confirmPendingTime.mjs";
 import confirmCancelPendingTime from "../handlers/booking/confirmCancelPendingTime.mjs";
-import generateRoutine from "../handlers/assignment/generateRoutinePreview.mjs";
-import assignRoutineToMember from "../handlers/assignment/assignRoutineToMember.mjs";
 import assignment from "../handlers/assignment/index.mjs";
 import dayjs from "dayjs";
 
@@ -21,6 +19,8 @@ router.post("/", async (req, res) => {
   const kakaoId = req.body.userRequest?.user?.id;
   const firstLine = utterance?.split("\n")[0]?.trim();
 
+  console.log("🟡 발화 입력:", utterance);
+
   try {
     // ✅ 오전/오후 응답 처리
     if (/^오전$|^오후$/.test(utterance)) {
@@ -30,11 +30,9 @@ router.post("/", async (req, res) => {
       if (reserveSession[kakaoId]?.type === "pending-am-or-pm") {
         return confirmPendingTime(kakaoId, utterance, res);
       }
-
       if (cancelSession[kakaoId]?.type === "pending-cancel-confirmation") {
         return confirmCancelPendingTime(kakaoId, utterance, res);
       }
-
       if (statusSession[kakaoId]?.type === "pending-status-confirmation") {
         let time = dayjs(statusSession[kakaoId].base_time);
         if (isPm && time.hour() < 12) time = time.add(12, "hour");
@@ -42,7 +40,6 @@ router.post("/", async (req, res) => {
         delete statusSession[kakaoId];
         return confirmSlotStatus(kakaoId, time, res);
       }
-
       return res.json(replyText("확정할 요청이 없습니다. 다시 시도해주세요."));
     }
 
