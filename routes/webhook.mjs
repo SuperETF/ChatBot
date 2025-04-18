@@ -1,5 +1,4 @@
-// ✅ webhook.mjs 흐름 개선용 일부 (등록한 멀티턴 흐름 예시 기준)
-
+// webhook.mjs 개선: 등록 흐름에서 name/phone 누락 시 등록 방지
 import express from "express";
 import { handlers } from "../handlers/index.mjs";
 import classifyIntent from "../handlers/system/classifyIntent.mjs";
@@ -20,9 +19,6 @@ router.post("/", async (req, res) => {
   const utterance = req.body.userRequest?.utterance?.trim();
   const kakaoId = req.body.userRequest?.user?.id;
   const ctx = sessionContext[kakaoId];
-
-  console.log("📩 사용자 발화:", utterance);
-  console.log("👤 사용자 ID:", kakaoId);
 
   try {
     if (ctx && Date.now() - ctx.timestamp > SESSION_TTL_MS) {
@@ -62,18 +58,16 @@ router.post("/", async (req, res) => {
       return res.json(replyText("회원님의 성함을 입력해주세요."));
     }
 
-    if (["등록", "등록할게"].includes(utterance)) {
-      if (ctx?.intent === "회원 등록" && ctx?.data?.name && ctx?.data?.phone) {
+    if (["등록", "등록할게", "확인", "진행해"].includes(utterance)) {
+      if (ctx?.intent === "회원 등록") {
+        if (!ctx.data?.name || !ctx.data?.phone) {
+          return res.json(replyText("등록할 정보가 부족합니다. 이름과 전화번호를 다시 입력해주세요."));
+        }
+
+        const composedInput = `회원 등록 ${ctx.data.name} ${ctx.data.phone}`;
         delete sessionContext[kakaoId];
-        return handlers.auth(
-          kakaoId,
-          `회원 등록 ${ctx.data.name} ${ctx.data.phone}`,
-          res,
-          "registerTrainerMember",
-          sessionContext
-        );
-      } else {
-        return res.json(replyText("아직 등록할 정보가 부족합니다. 이름과 전화번호를 모두 입력해주세요."));
+
+        return handlers.auth(kakaoId, composedInput, res, "registerTrainerMember", sessionContext);
       }
     }
 
@@ -95,15 +89,12 @@ router.post("/", async (req, res) => {
     }
 
     const { intent, handler, action } = await classifyIntent(utterance, kakaoId);
-    console.log("🎯 INTENT 결과:", { intent, handler, action });
-
     if (handlers[handler]) {
       return await handlers[handler](kakaoId, utterance, res, action, sessionContext);
     }
 
     return fallback(utterance, kakaoId, res, handler, action);
   } catch (error) {
-    console.error("💥 webhook 처리 중 오류 발생:", error);
     await supabase.from("fallback_logs").insert({
       kakao_id: kakaoId,
       utterance,
