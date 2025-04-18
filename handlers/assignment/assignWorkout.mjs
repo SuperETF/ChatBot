@@ -1,31 +1,8 @@
-// handlers/assignment/assignWorkout.mjs
 import { supabase } from "../../services/supabase.mjs";
 import { replyText } from "../../utils/reply.mjs";
 import { parseDateWithFallback } from "../../utils/parseDateWithFallback.mjs";
-import OpenAI from "openai";
-
-const openai = new OpenAI();
-const ACTION_MODEL_ID = process.env.GPT_MODEL_ID_ASSIGN_WORKOUT;
 
 export default async function assignWorkout(kakaoId, utterance, res) {
-  // ✅ GPT 파싱: 이름, 과제, 날짜 추출 시도
-  let gptName = null, gptTitle = null, gptDates = [];
-  try {
-    const gptRes = await openai.chat.completions.create({
-      model: ACTION_MODEL_ID,
-      messages: [
-        { role: "system", content: "트레이너가 회원에게 과제를 부여합니다. 사용자의 입력에서 이름, 과제명, 날짜(문자열)를 추출해주세요. 결과는 JSON 형식으로 name, title, dates 키로 반환해주세요." },
-        { role: "user", content: utterance }
-      ]
-    });
-    const parsed = JSON.parse(gptRes.choices[0].message.content.trim());
-    gptName = parsed.name;
-    gptTitle = parsed.title;
-    gptDates = parsed.dates;
-  } catch (e) {
-    console.error("❌ GPT 파싱 실패:", e);
-  }
-
   // ✅ 트레이너 인증
   const { data: trainer } = await supabase
     .from("trainers")
@@ -37,13 +14,21 @@ export default async function assignWorkout(kakaoId, utterance, res) {
     return res.json(replyText("트레이너 인증 정보가 없습니다. 먼저 전문가 등록을 진행해주세요."));
   }
 
-  const name = gptName || utterance.match(/[가-힣]{2,4}(님|씨|선생님)?/)?.[0]?.replace(/(님|씨|선생님)/g, "");
-  const title = gptTitle || utterance.replace(name, "").trim();
+  // ✅ 이름 추출
+  const nameMatch = utterance.match(/[가-힣]{2,10}(님|씨|선생님)?/);
+  const name = nameMatch?.[0]?.replace(/(님|씨|선생님)/g, "");
 
-  if (!name || title.length < 3) {
-    return res.json(replyText("회원 이름과 과제 내용을 모두 포함해주세요. 예: 김철수님 스쿼트 50개"));
+  if (!name) {
+    return res.json(replyText("회원 이름을 포함해서 입력해주세요. 예: 김복두 런지 30개"));
   }
 
+  // ✅ 과제명 추출
+  const title = utterance.replace(nameMatch[0], "").trim();
+  if (title.length < 2) {
+    return res.json(replyText("과제명을 포함해주세요. 예: 런지 30개"));
+  }
+
+  // ✅ 회원 존재 확인
   const { data: member } = await supabase
     .from("members")
     .select("id")
@@ -55,10 +40,8 @@ export default async function assignWorkout(kakaoId, utterance, res) {
     return res.json(replyText(`${name}님은 당신의 회원이 아니거나 존재하지 않습니다.`));
   }
 
-  const parsedDates = gptDates?.length > 0
-    ? await Promise.all(gptDates.map(parseDateWithFallback))
-    : await parseDateWithFallback(utterance);
-
+  // ✅ 날짜 추출
+  const parsedDates = await parseDateWithFallback(utterance);
   const flatDates = parsedDates.flat().filter(Boolean);
 
   if (!flatDates || flatDates.length === 0) {
@@ -76,6 +59,7 @@ export default async function assignWorkout(kakaoId, utterance, res) {
     return res.json(replyText("과거 날짜에는 과제를 등록할 수 없습니다. 미래 날짜를 입력해주세요."));
   }
 
+  // ✅ 과제 등록
   const { data: assignment, error } = await supabase
     .from("personal_assignments")
     .insert({
@@ -92,6 +76,7 @@ export default async function assignWorkout(kakaoId, utterance, res) {
     return res.json(replyText("과제 저장 중 문제가 발생했습니다. 다시 시도해주세요."));
   }
 
+  // ✅ 스케줄 등록
   const insertedDates = [];
   for (const { date, time } of flatDates) {
     const { error: scheduleError } = await supabase
