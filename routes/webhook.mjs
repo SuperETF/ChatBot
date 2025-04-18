@@ -9,6 +9,8 @@ import cancelPersonal from "../handlers/booking/cancelPersonal.mjs";
 import showSlotStatus from "../handlers/booking/showSlotStatus.mjs";
 import showMyReservations from "../handlers/booking/showMyReservations.mjs";
 import confirmPendingTime from "../handlers/booking/confirmPendingTime.mjs";
+import confirmCancelPendingTime from "../handlers/booking/confirmCancelPendingTime.mjs";
+
 
 const router = express.Router();
 
@@ -18,11 +20,19 @@ router.post("/", async (req, res) => {
   const firstLine = utterance?.split("\n")[0]?.trim();
 
   try {
-    // ✅ 오전/오후 답변 처리 (확정 흐름)
+    // ✅ 오전/오후 응답 처리
     if (/^오전$|^오후$/.test(utterance.trim())) {
-      return confirmPendingTime(kakaoId, utterance, res);
-    }
+      const ctx = sessionContext[kakaoId];
 
+      if (ctx?.type === "pending-cancel-confirmation") {
+        return confirmCancelPendingTime(kakaoId, utterance, res);
+      }
+      if (ctx?.type === "pending-am-or-pm") {
+        return confirmPendingTime(kakaoId, utterance, res);
+      }
+
+      return res.json(replyText("확정할 요청이 없습니다. 다시 시도해주세요."));
+    }
     // ✅ 트레이너 등록 (이름 + 번호 + 인증번호 4자리)
     if (/^전문가\s+[가-힣]{2,10}\s+01[016789][0-9]{7,8}\s+\d{4}$/.test(firstLine)) {
       return auth.auth(kakaoId, utterance, res, "registerTrainer");
@@ -62,6 +72,7 @@ router.post("/", async (req, res) => {
     if (/운동|예약/.test(utterance) && /\d{1,2}시/.test(utterance)) {
       return reservePersonal(kakaoId, utterance, res);
     }
+    
 
     // ❌ fallback
     return fallback(utterance, kakaoId, res, "none", "none");
