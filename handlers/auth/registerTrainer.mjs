@@ -1,3 +1,4 @@
+//auth/registerTrainer.mjs
 import { openai } from "../../services/openai.mjs";
 import { supabase } from "../../services/supabase.mjs";
 import { replyText, replyButton } from "../../utils/reply.mjs";
