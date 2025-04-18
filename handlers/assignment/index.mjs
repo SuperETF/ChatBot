@@ -35,7 +35,7 @@ export default async function assignment(kakaoId, utterance, res, action) {
     case "generateRoutinePreview": {
       const routine = generateRoutine(utterance);
       return res.json({
-        text: `🤖 AI 루틴 추천:\n- ${routine.join("\n- ")}`,
+        text: `기본 루틴 추천:\n- ${routine.join("\n- ")}`,
         quickReplies: [
           { label: "홍길동에게 배정", action: "message", messageText: "홍길동 루틴 배정" }
         ]
