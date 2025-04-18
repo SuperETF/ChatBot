@@ -34,12 +34,36 @@ export default async function assignment(kakaoId, utterance, res, action) {
 
     case "generateRoutinePreview": {
       const routine = generateRoutine(utterance);
-      return res.json({
-        text: `기본 루틴 추천:\n- ${routine.join("\n- ")}`,
-        quickReplies: [
-          { label: "홍길동에게 배정", action: "message", messageText: "홍길동 루틴 배정" }
-        ]
-      });
+
+      const { data: trainer } = await supabase
+        .from("trainers")
+        .select("id")
+        .eq("kakao_id", kakaoId)
+        .maybeSingle();
+
+      if (!trainer) {
+        return res.json(replyText("트레이너 인증이 필요합니다. 먼저 전문가 등록을 진행해주세요."));
+      }
+
+      const { data: members } = await supabase
+        .from("members")
+        .select("name")
+        .eq("trainer_id", trainer.id);
+
+      const quickReplies = members?.map(m => ({
+        label: `${m.name}에게 배정`,
+        action: "message",
+        messageText: `${m.name} 루틴 배정`
+      })) || [];
+
+      console.log("✅ 루틴 조건 진입:", utterance);
+      console.log("📦 루틴 내용:", routine);
+      console.log("👤 추천 대상 회원:", members?.map(m => m.name));
+
+      return res.json(replyText(
+        `🤖 AI 루틴 추천:\n- ${routine.join("\n- ")}\n\n👥 누구에게 배정할까요?`,
+        quickReplies
+      ));
     }
 
     case "assignRoutineToMember": {
