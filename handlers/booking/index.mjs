@@ -1,11 +1,9 @@
 // ✅ handlers/booking/index.mjs
-import showTrainerSlots from "./showTrainerSlots.mjs";
 import reservePersonal from "./reservePersonal.mjs";
 import cancelPersonal from "./cancelPersonal.mjs";
 import confirmReservation from "./confirmReservation.mjs";
 import showMyReservations from "./showMyReservations.mjs";
 import showPersonalSlots from "./showPersonalSlots.mjs";
-import registerAvailability from "./registerAvailability.mjs";
 import { replyText } from "../../utils/reply.mjs";
 
 export default async function booking(kakaoId, utterance, res, action) {
