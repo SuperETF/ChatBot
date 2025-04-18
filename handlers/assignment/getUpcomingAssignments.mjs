@@ -1,3 +1,4 @@
+// handlers/assignment/getUpcomingAssignments.mjs
 import { supabase } from "../../services/supabase.mjs";
 import { replyText } from "../../utils/reply.mjs";
 
@@ -8,7 +9,9 @@ export default async function getUpcomingAssignments(kakaoId, res) {
     .eq("kakao_id", kakaoId)
     .maybeSingle();
 
-  if (!member) return res.json(replyText("회원 인증 정보를 찾을 수 없습니다."));
+  if (!member) {
+    return res.json(replyText("회원 인증 정보를 찾을 수 없습니다. 등록된 회원인지 확인해주세요."));
+  }
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -37,5 +40,7 @@ export default async function getUpcomingAssignments(kakaoId, res) {
     return `• ${s.target_date}${time} - ${title}`;
   }).join("\n");
 
-  return res.json(replyText(`📌 ${member.name}님의 예정된 과제:\n\n${message}`));
+  return res.json(replyText(`📌 ${member.name}님의 예정된 과제:
+
+${message}`));
 }

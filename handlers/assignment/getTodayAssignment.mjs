@@ -1,15 +1,12 @@
+// handlers/assignment/getTodayAssignment.mjs
 import { supabase } from "../../services/supabase.mjs";
 import { replyText } from "../../utils/reply.mjs";
 
 function parseTargetDate(text) {
   const today = new Date();
-  if (/내일/.test(text)) {
-    today.setDate(today.getDate() + 1);
-  } else if (/모레/.test(text)) {
-    today.setDate(today.getDate() + 2);
-  } else if (/어제/.test(text)) {
-    today.setDate(today.getDate() - 1);
-  }
+  if (/내일/.test(text)) today.setDate(today.getDate() + 1);
+  else if (/모레/.test(text)) today.setDate(today.getDate() + 2);
+  else if (/어제/.test(text)) today.setDate(today.getDate() - 1);
   return today.toISOString().slice(0, 10);
 }
 
@@ -20,9 +17,11 @@ export default async function getTodayAssignment(kakaoId, utterance, res) {
     .eq("kakao_id", kakaoId)
     .maybeSingle();
 
-  if (!member) return res.json(replyText("회원 인증 정보가 없습니다."));
+  if (!member) {
+    return res.json(replyText("회원 인증 정보를 찾을 수 없습니다. 전문가에게 문의해주세요."));
+  }
 
-  const targetDate = parseTargetDate(utterance); // ✅ 유연한 날짜 인식
+  const targetDate = parseTargetDate(utterance);
 
   const { data: assignmentIds } = await supabase
     .from("personal_assignments")
@@ -51,5 +50,7 @@ export default async function getTodayAssignment(kakaoId, utterance, res) {
     return `• ${a?.title || "제목 없음"} (${a?.status || "-"})`;
   }).join("\n");
 
-  return res.json(replyText(`📌 ${targetDate}의 과제 (${member.name}님):\n${message}`));
+  return res.json(replyText(`📌 ${member.name}님의 ${targetDate} 과제:
+
+${message}`));
 }

@@ -9,7 +9,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-const filePath = "listMembers_intent.jsonl";
+const filePath = "assignWorkout_action.jsonl";
 
 try {
   console.log("📤 OpenAI 파일 업로드 중...");
