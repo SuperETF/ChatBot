@@ -106,6 +106,8 @@ router.post("/", async (req, res) => {
 
     // ✅ 루틴 생성 요청
     if (/루틴.*(만들|추천|생성|등록)/.test(utterance) || /운동 루틴/.test(utterance)) {
+      console.log("✅ 루틴 조건 진입:", utterance);
+
       const routine = generateRoutine(utterance);
       return res.json({
         text: `🤖 AI 루틴 추천:\n- ${routine.join("\n- ")}`,
