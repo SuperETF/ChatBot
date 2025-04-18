@@ -32,18 +32,18 @@ export default async function assignment(kakaoId, utterance, res, action) {
     case "finishAssignment":
       return finishAssignment(kakaoId, res);
 
-    case "generateRoutinePreview": {
-      const routine = generateRoutine(utterance);
-
-      const { data: trainer } = await supabase
-        .from("trainers")
-        .select("id")
-        .eq("kakao_id", kakaoId)
-        .maybeSingle();
-
-      if (!trainer) {
-        return res.json(replyText("트레이너 인증이 필요합니다. 먼저 전문가 등록을 진행해주세요."));
-      }
+      case "generateRoutinePreview": {
+        const routine = await generateRoutine(utterance); // ✅ await 필수
+      
+        const { data: trainer } = await supabase
+          .from("trainers")
+          .select("id")
+          .eq("kakao_id", kakaoId)
+          .maybeSingle();
+      
+        if (!trainer) {
+          return res.json(replyText("트레이너 인증이 필요합니다. 먼저 전문가 등록을 진행해주세요."));
+        }
 
       const { data: members } = await supabase
         .from("members")
