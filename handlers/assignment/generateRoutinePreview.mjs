@@ -5,7 +5,7 @@ import { replyText } from "../../utils/reply.mjs";
 
 // ✅ 루틴 생성 유틸
 export default async function generateRoutinePreview(kakaoId, utterance, res) {
-  const routine = generateRoutine(utterance);
+  const routine = await generateRoutine(utterance);
 
   // ✅ 트레이너 인증
   const { data: trainer } = await supabase
