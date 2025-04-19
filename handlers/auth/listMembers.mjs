@@ -1,10 +1,12 @@
-// handlers/auth/listMembers.mjs
 import { supabase } from "../../services/supabase.mjs";
 import { replyText, replyButton } from "../../utils/reply.mjs";
 
 export default async function listMembers(kakaoId, utterance, res) {
-  if (utterance.trim() !== "회원 목록") {
-    return res.json(replyText("❗ 회원 목록을 조회하려면 '회원 목록'이라고 입력해주세요."));
+  const clean = utterance.trim();
+
+  // ✅ 정규식 기반 유연한 패턴 대응
+  if (!/회원\s*(목록|조회|내역|현황)/.test(clean)) {
+    return res.json(replyText("❗ 회원 목록을 조회하려면 '회원 목록' 또는 '회원 조회'라고 입력해주세요."));
   }
 
   // ✅ 트레이너 인증 여부 확인
