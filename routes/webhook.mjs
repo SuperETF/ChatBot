@@ -94,9 +94,15 @@ router.post("/", async (req, res) => {
     if (/과제\s*종료|종료하기/.test(utterance)) {
       return assignment(kakaoId, utterance, res, "finishAssignment");
     }
-    if (/^[가-힣]{2,10}(님|씨)?\s+(런지|스쿼트|플랭크|버피|과제|숙제)/.test(utterance)) {
-      return assignment(kakaoId, utterance, res, "assignWorkout");
-    }
+    // ✅ 이름 + 날짜/반복 + 과제 키워드 포함 → 순서 무관하게 대응
+if (
+  /[가-힣]{2,10}/.test(utterance) &&  // 이름 포함
+  /(런지|스쿼트|플랭크|버피|푸시업|과제|숙제)/.test(utterance) &&  // 운동/과제 키워드 포함
+  /(매일|오늘|내일|[0-9]{1,2}일|월|화|수|목|금|토|일)/.test(utterance) // 날짜/요일 키워드 포함
+) {
+  return assignment(kakaoId, utterance, res, "assignWorkout");
+}
+
 
     // ✅ 루틴 추천 intent
     if (
