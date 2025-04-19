@@ -50,8 +50,8 @@ router.post("/", async (req, res) => {
       return res.json(replyText("확정할 요청이 없습니다. 다시 시도해주세요."));
     }
 
-    // ✅ 등록 관련 intent
-    if (/^전문가\s+[가-힣]{2,10}\s+01[016789][0-9]{7,8}$/.test(firstLine)) {
+     // ✅ 등록 관련 intent
+     if (/^전문가\s+[가-힣]{2,10}\s+01[016789][0-9]{7,8}$/.test(firstLine)) {
       return auth.auth(kakaoId, utterance, res, "registerTrainer");
     }
     if (/^회원\s+[가-힣]{2,10}\s+01[016789][0-9]{7,8}\s+\d{4}$/.test(firstLine)) {
@@ -60,7 +60,10 @@ router.post("/", async (req, res) => {
     if (/^[가-힣]{2,10}\s+01[016789][0-9]{7,8}\s+\d{4}$/.test(firstLine)) {
       return auth.auth(kakaoId, utterance, res, "registerMember");
     }
-    if (firstLine === "회원 목록") {
+
+    // ✅ 회원 목록 관련 정규식 (공백 유무 포함 유연 대응)
+    const normalized = utterance.replace(/\s+/g, "");
+    if (/회원(목록|조회|내역|현황)/.test(normalized)) {
       return auth.auth(kakaoId, utterance, res, "listMembers");
     }
 
@@ -120,6 +123,7 @@ router.post("/", async (req, res) => {
     
       return assignRoutineToMember(trainerId, memberId, routineList, dateList, res);
     }
+
     // ❌ fallback
     return fallback(utterance, kakaoId, res, "none", "none");
 
