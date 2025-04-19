@@ -30,11 +30,6 @@ export default async function fallback(utterance, kakaoId, res, handler = null, 
   }
 
   return res.json(replyText(
-    `🤔 말씀하신 내용을 잘 이해하지 못했어요.\n\n` +
-    `아래 예시처럼 입력해보실 수 있어요:\n\n` +
-    `• 김복두 01012345678 회원 등록\n` +
-    `• 다음 주 화요일 오후 3시 수업 예약\n` +
-    `• 금요일 개인 운동 신청\n\n` +
-    `조금만 더 구체적으로 입력해주시면 바로 도와드릴게요!`
+    `🤔 말씀하신 내용을 잘 이해하지 못했어요.\n\n`
   ));
 }

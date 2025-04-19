@@ -49,11 +49,15 @@ export default async function assignment(kakaoId, utterance, res, action) {
         .select("name")
         .eq("trainer_id", trainer.id);
 
-      const quickReplies = members?.map(m => ({
+      if (!members || members.length === 0) {
+        return res.json(replyText("등록된 회원이 없습니다. 먼저 회원을 등록해주세요."));
+      }
+
+      const quickReplies = members.map(m => ({
         label: `${m.name}에게 배정`,
         action: "message",
         messageText: `${m.name} 루틴 배정`
-      })) || [];
+      }));
 
       return res.json(replyText(
         `🤖 AI 루틴 추천:\n- ${routine.join("\n- ")}\n\n👥 누구에게 배정할까요?`,
@@ -63,27 +67,31 @@ export default async function assignment(kakaoId, utterance, res, action) {
 
     case "assignRoutineToMember": {
       const nameMatch = utterance.match(/([가-힣]{2,10})/);
-      const name = nameMatch?.[1] || "홍길동"; // fallback
-      
-      const routine = generateRoutine("상체");
-    
+      const name = nameMatch?.[1];
+
+      if (!name) {
+        return res.json(replyText("배정할 회원 이름을 정확히 입력해주세요."));
+      }
+
+      const routine = generateRoutine(utterance);
+
       const { data: trainer } = await supabase
         .from("trainers")
         .select("id")
         .eq("kakao_id", kakaoId)
         .maybeSingle();
-    
+
       if (!trainer) {
         return res.json(replyText("트레이너 인증이 필요합니다."));
       }
-    
+
       const { data: member } = await supabase
         .from("members")
         .select("id")
         .eq("name", name)
         .eq("trainer_id", trainer.id)
         .maybeSingle();
-    
+
       if (!member) {
         return res.json(replyText(`${name}님은 등록된 회원이 아닙니다.`));
       }
@@ -101,7 +109,7 @@ export default async function assignment(kakaoId, utterance, res, action) {
   }
 }
 
-// ✅ 루틴 템플릿 생성 함수 (내부 고정 기반)
+// ✅ 루틴 템플릿 생성 함수
 function generateRoutine(goal = "") {
   if (/상체/.test(goal)) return ["푸시업 20개", "딥스 15개", "플랭크 1분"];
   if (/하체/.test(goal)) return ["스쿼트 30개", "런지 20개", "점프스쿼트 15개"];
