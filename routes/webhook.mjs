@@ -111,16 +111,15 @@ router.post("/", async (req, res) => {
     if (assignmentSession[kakaoId]?.type === "pending-routine-dates") {
       const { trainerId, memberId, routineList } = assignmentSession[kakaoId];
       delete assignmentSession[kakaoId];
-
+    
       const dateList = parseNaturalDateTime(utterance);
-
+    
       if (!dateList || dateList.length === 0) {
         return res.json(replyText("❗ 날짜를 이해하지 못했어요. 예: '내일부터 3일간'처럼 입력해주세요."));
       }
-
+    
       return assignRoutineToMember(trainerId, memberId, routineList, dateList, res);
     }
-
     // ❌ fallback
     return fallback(utterance, kakaoId, res, "none", "none");
 
