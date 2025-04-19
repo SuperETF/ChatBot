@@ -4,13 +4,14 @@ import getUpcomingAssignments from "./getUpcomingAssignments.mjs";
 import startAssignment from "./startAssignment.mjs";
 import finishAssignment from "./finishAssignment.mjs";
 import assignRoutineToMember from "./assignRoutineToMember.mjs";
+import { assignmentSession } from "./sessionContext.mjs";
 import { replyText } from "../../utils/reply.mjs";
 import { supabase } from "../../services/supabase.mjs";
 
 /**
  * 과제 관련 액션 dispatcher
  * @param {string} kakaoId - 카카오 사용자 ID
- * @param {string} utterance - 유저 발화 (필요한 경우만)
+ * @param {string} utterance - 유저 발화
  * @param {object} res - Express response 객체
  * @param {string} action - 수행할 액션
  */
@@ -96,12 +97,17 @@ export default async function assignment(kakaoId, utterance, res, action) {
         return res.json(replyText(`${name}님은 등록된 회원이 아닙니다.`));
       }
 
-      const now = new Date();
-      const dates = Array.from({ length: 3 }, (_, i) =>
-        new Date(now.getTime() + (i + 1) * 86400000).toISOString().slice(0, 10)
-      );
+      // ✅ 멀티턴: 날짜 입력 유도
+      assignmentSession[kakaoId] = {
+        type: "pending-routine-dates",
+        trainerId: trainer.id,
+        memberId: member.id,
+        routineList: routine
+      };
 
-      return assignRoutineToMember(trainer.id, member.id, routine, dates, res);
+      return res.json(replyText(
+        "🗓 언제부터 며칠 동안 배정할까요?\n예: 내일부터 3일 / 이번 주 월수금"
+      ));
     }
 
     default:

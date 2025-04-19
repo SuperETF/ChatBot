@@ -10,6 +10,8 @@ import showMyReservations from "../handlers/booking/showMyReservations.mjs";
 import confirmPendingTime from "../handlers/booking/confirmPendingTime.mjs";
 import confirmCancelPendingTime from "../handlers/booking/confirmCancelPendingTime.mjs";
 import assignment from "../handlers/assignment/index.mjs";
+import { assignmentSession } from "../handlers/assignment/sessionContext.mjs";
+import parseNaturalDates from "../utils/parseNaturalDates.mjs";
 import dayjs from "dayjs";
 
 const router = express.Router();
@@ -99,6 +101,14 @@ if (
     if (/^[가-힣]{2,10}(?:\s+루틴\s*배정)?$/.test(utterance)) {
       console.log("✅ 이름 기반 루틴 배정 조건 진입:", utterance);
       return assignment(kakaoId, utterance, res, "assignRoutineToMember");
+    }
+
+    if (assignmentSession[kakaoId]?.type === "pending-routine-dates") {
+      const { trainerId, memberId, routineList } = assignmentSession[kakaoId];
+      delete assignmentSession[kakaoId];
+    
+      const dateList = parseNaturalDates(utterance);
+      return assignRoutineToMember(trainerId, memberId, routineList, dateList, res);
     }
 
     // ❌ fallback

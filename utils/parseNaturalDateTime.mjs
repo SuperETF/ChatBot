@@ -15,49 +15,66 @@ const WEEKDAYS = {
   "일": 0, "월": 1, "화": 2, "수": 3, "목": 4, "금": 5, "토": 6,
 };
 
+/**
+ * 자연어 시간 파싱 (오늘/내일/요일/오전오후/단순 시각)
+ * @param {string} utterance - 사용자 발화
+ * @returns { time: dayjs, amOrPmRequired: boolean } | null
+ */
 export function parseNaturalDateTime(utterance) {
-  const now = dayjs();
+  const now = dayjs().second(0);
+  const baseDate = now.startOf("day");
 
-  // ✅ 오전/오후 명확한 경우
+  // ✅ 오전/오후 + 시
   const ampmMatch = utterance.match(/(오전|오후)\s*(\d{1,2})시/);
   if (ampmMatch) {
     let hour = parseInt(ampmMatch[2], 10);
     if (ampmMatch[1] === "오후" && hour < 12) hour += 12;
     if (ampmMatch[1] === "오전" && hour === 12) hour = 0;
-    return { time: now.hour(hour).minute(0).second(0), amOrPmRequired: false };
+    return { time: baseDate.hour(hour), amOrPmRequired: false };
   }
 
-  // ✅ 오늘 or 내일
-  if (/오늘\s*(\d{1,2})시/.test(utterance)) {
-    const hour = parseInt(utterance.match(/오늘\s*(\d{1,2})시/)[1], 10);
-    return { time: now.hour(hour).minute(0).second(0), amOrPmRequired: true };
+  // ✅ 오늘 n시
+  const todayMatch = utterance.match(/오늘\s*(\d{1,2})시/);
+  if (todayMatch) {
+    const hour = parseInt(todayMatch[1], 10);
+    const target = baseDate.hour(hour);
+    return {
+      time: target.isSameOrAfter(now) ? target : target.add(1, "day"),
+      amOrPmRequired: true,
+    };
   }
 
-  if (/내일\s*(\d{1,2})시/.test(utterance)) {
-    const hour = parseInt(utterance.match(/내일\s*(\d{1,2})시/)[1], 10);
-    return { time: now.add(1, "day").hour(hour).minute(0).second(0), amOrPmRequired: true };
+  // ✅ 내일 n시
+  const tomorrowMatch = utterance.match(/내일\s*(\d{1,2})시/);
+  if (tomorrowMatch) {
+    const hour = parseInt(tomorrowMatch[1], 10);
+    return { time: baseDate.add(1, "day").hour(hour), amOrPmRequired: true };
   }
 
-  // ✅ 요일 기반
-  const match = utterance.match(/(월|화|수|목|금|토|일)(요일)?\s*(\d{1,2})시/);
-  if (match) {
-    const weekdayName = match[1];
-    const hour = parseInt(match[3], 10);
+  // ✅ 요일 기반 (월/화/...요일 n시)
+  const weekdayMatch = utterance.match(/(월|화|수|목|금|토|일)(요일)?\s*(\d{1,2})시/);
+  if (weekdayMatch) {
+    const weekdayName = weekdayMatch[1];
+    const hour = parseInt(weekdayMatch[3], 10);
     const targetWeekday = WEEKDAYS[weekdayName];
-    let targetDate = now.startOf("day");
 
-    while (targetDate.day() !== targetWeekday || targetDate.isBefore(now, "day")) {
-      targetDate = targetDate.add(1, "day");
+    let target = baseDate;
+    while (target.day() !== targetWeekday || target.isBefore(now, "day")) {
+      target = target.add(1, "day");
     }
 
-    return { time: targetDate.hour(hour).minute(0).second(0), amOrPmRequired: true };
+    return { time: target.hour(hour), amOrPmRequired: true };
   }
 
-  // ✅ 그냥 '3시', '6시'만 있을 경우
+  // ✅ 단순 n시 (예: "3시"만 있음)
   const simpleMatch = utterance.match(/(^|\s)(\d{1,2})시/);
   if (simpleMatch) {
     const hour = parseInt(simpleMatch[2], 10);
-    return { time: now.hour(hour).minute(0).second(0), amOrPmRequired: true };
+    const target = baseDate.hour(hour);
+    return {
+      time: target.isSameOrAfter(now) ? target : target.add(1, "day"),
+      amOrPmRequired: true,
+    };
   }
 
   // ❌ 파싱 실패
