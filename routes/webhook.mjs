@@ -44,7 +44,7 @@ router.post("/", async (req, res) => {
     }
 
     // ✅ 등록 관련
-    if (/^전문가\s+[가-힣]{2,10}\s+01[016789][0-9]{7,8}\s+\d{4}$/.test(firstLine)) {
+    if (/^전문가\s+[가-힣]{2,10}\s+01[016789][0-9]{7,8}$/.test(firstLine)) {
       return auth.auth(kakaoId, utterance, res, "registerTrainer");
     }
     if (/^회원\s+[가-힣]{2,10}\s+01[016789][0-9]{7,8}\s+\d{4}$/.test(firstLine)) {
@@ -87,7 +87,8 @@ router.post("/", async (req, res) => {
     if (/^[가-힣]{2,10}(님|씨)?\s+(런지|스쿼트|플랭크|버피|과제|숙제)/.test(utterance)) {
       return assignment(kakaoId, utterance, res, "assignWorkout");
     }
-    // ✅ 루틴 과제 배정
+
+    // ✅ 루틴 배정 분기: 이름만 말해도 처리 가능
     if (/^[가-힣]{2,10}(?:\s+루틴\s*배정)?$/.test(utterance)) {
       console.log("✅ 이름 기반 루틴 배정 조건 진입:", utterance);
       return assignment(kakaoId, utterance, res, "assignRoutineToMember");
