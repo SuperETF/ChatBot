@@ -7,6 +7,7 @@ import generateRoutine from "./generateRoutinePreview.mjs";
 import assignRoutineToMember from "./assignRoutineToMember.mjs";
 import { replyText } from "../../utils/reply.mjs";
 import { supabase } from "../../services/supabase.mjs";
+import { Await } from "react-router-dom";
 
 /**
  * 과제 관련 액션 dispatcher
