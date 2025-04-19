@@ -97,11 +97,11 @@ router.post("/", async (req, res) => {
 
     // ✅ 루틴 추천 intent
     if (
-      /(루틴\s*(추천|생성|등록|만들))|((추천|생성|등록|만들)\s*루틴)|([가-힣]{2,10})?\s*(상체|하체|유산소|초보자)?\s*루틴\s*(추천|생성|등록|만들)?/.test(utterance)
+      /(루틴\s*(추천|생성|등록|만들))|((추천|생성|등록|만들)\s*루틴)|([가-힣]{2,10})?\s*(상체|하체|유산소|초보자)?\s*루틴\s*(추천|생성|등록|만들)?|상체.*(추천|루틴)/.test(utterance)
     ) {
       return assignment(kakaoId, utterance, res, "generateRoutinePreview");
     }
-
+  
     // ✅ 루틴 배정 (이름 기반)
     if (/^[가-힣]{2,10}(?:\s+루틴\s*배정)?$/.test(utterance)) {
       return assignment(kakaoId, utterance, res, "assignRoutineToMember");
