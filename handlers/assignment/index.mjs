@@ -3,8 +3,7 @@ import getTodayAssignment from "./getTodayAssignment.mjs";
 import getUpcomingAssignments from "./getUpcomingAssignments.mjs";
 import startAssignment from "./startAssignment.mjs";
 import finishAssignment from "./finishAssignment.mjs";
-import assignRoutineToMember from "./assignRoutineToMember.mjs";
-import { assignmentSession } from "./sessionContext.mjs";
+import { assignmentSession } from "../../utils/sessionContext.mjs";
 import { replyText } from "../../utils/reply.mjs";
 import { supabase } from "../../services/supabase.mjs";
 
