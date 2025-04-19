@@ -88,9 +88,13 @@ router.post("/", async (req, res) => {
       return assignment(kakaoId, utterance, res, "assignWorkout");
     }
 
-    if (/루틴.*(추천|생성|등록|만들)|.*(추천|생성|등록|만들).*루틴/.test(utterance)) {
-      return assignment(kakaoId, utterance, res, "generateRoutinePreview");
-    }
+    // ✅ 루틴 생성/추천 관련 발화 패턴 통합
+if (
+  /(루틴\s*(추천|생성|등록|만들))|((추천|생성|등록|만들)\s*루틴)|([가-힣]{2,10})?\s*(상체|하체|유산소|초보자)?\s*루틴\s*(추천|생성|등록|만들)?/.test(utterance)
+) {
+  return assignment(kakaoId, utterance, res, "generateRoutinePreview");
+}
+
     // ✅ 루틴 배정 분기: 이름만 말해도 처리 가능
     if (/^[가-힣]{2,10}(?:\s+루틴\s*배정)?$/.test(utterance)) {
       console.log("✅ 이름 기반 루틴 배정 조건 진입:", utterance);
