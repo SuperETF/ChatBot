@@ -87,16 +87,9 @@ router.post("/", async (req, res) => {
     if (/^[가-힣]{2,10}(님|씨)?\s+(런지|스쿼트|플랭크|버피|과제|숙제)/.test(utterance)) {
       return assignment(kakaoId, utterance, res, "assignWorkout");
     }
-
-    // ✅ 루틴 생성 → assignment에서 분기
-    if (/(루틴.*(추천|생성|등록|만들))|((추천|생성|등록|만들).*(루틴))/.test(utterance)) {
-      console.log("✅ 루틴 조건 진입:", utterance);
-      return assignment(kakaoId, utterance, res, "generateRoutinePreview");
-    }
-
     // ✅ 루틴 과제 배정
-    if (/([가-힣]{2,10})\s+루틴\s+배정/.test(utterance)) {
-      console.log("✅ 루틴 배정 조건 진입:", utterance);
+    if (/^[가-힣]{2,10}(?:\s+루틴\s*배정)?$/.test(utterance)) {
+      console.log("✅ 이름 기반 루틴 배정 조건 진입:", utterance);
       return assignment(kakaoId, utterance, res, "assignRoutineToMember");
     }
 
