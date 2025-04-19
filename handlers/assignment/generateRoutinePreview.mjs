@@ -5,8 +5,9 @@ import { replyText } from "../../utils/reply.mjs";
 
 // ✅ 루틴 생성 유틸
 export default async function generateRoutinePreview(kakaoId, utterance, res) {
-   // ✅ res 방어 코드
-   if (!res || typeof res.json !== "function") {
+  if (!res || typeof res.json !== "function") {
+    console.error("❌ res 상태 확인:", res);
+    console.trace("🔍 res 전달 시점 추적");
     throw new Error("❌ res 객체가 전달되지 않았습니다.");
   }
   const routine = await generateRoutine(utterance);
