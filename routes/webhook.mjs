@@ -11,7 +11,7 @@ import confirmPendingTime from "../handlers/booking/confirmPendingTime.mjs";
 import confirmCancelPendingTime from "../handlers/booking/confirmCancelPendingTime.mjs";
 import assignment from "../handlers/assignment/index.mjs";
 import { assignmentSession } from "../handlers/assignment/sessionContext.mjs";
-import parseNaturalDates from "../utils/parseNaturalDates.mjs";
+import parseNaturalDates from "../utils/parseNaturalDateTime.mjs";
 import dayjs from "dayjs";
 
 const router = express.Router();
