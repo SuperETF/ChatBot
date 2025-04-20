@@ -2,7 +2,7 @@
 
 import express from "express";
 import dayjs from "dayjs";
-import { supabase } from "../../services/supabase.mjs";
+import { supabase } from "../services/supabase.mjs";
 
 // 세션
 import {
