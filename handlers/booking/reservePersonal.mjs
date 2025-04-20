@@ -17,11 +17,13 @@ export default async function reservePersonal(kakaoId, utterance, res) {
   }
 
   const parsed = parseNaturalDateTime(utterance);
-  if (!parsed || !parsed.time) {
-    return res.json(replyText("예약할 날짜와 시간을 이해하지 못했어요. 예: '오늘 3시', '수요일 오전 8시'"));
-  }
 
-  const { time, amOrPmRequired } = parsed;
+// 👉 parse 결과가 배열이라면
+if (!parsed || !Array.isArray(parsed) || parsed.length === 0) {
+  return res.json(replyText("예약할 날짜와 시간을 이해하지 못했어요. 예: '오늘 3시', '수요일 오전 8시'"));
+}
+
+const date = parsed[0]; // ✅ 예약은 하나의 날짜만 있으면 됨
 
   // ✅ 오전/오후가 불명확하면 다시 질문
   if (amOrPmRequired) {
