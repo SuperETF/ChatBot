@@ -1,8 +1,9 @@
 import { supabase } from "../../services/supabase.mjs";
 import { replyText } from "../../utils/reply.mjs";
 import { parseNaturalDateTime } from "../../utils/parseNaturalDateTime.mjs";
+import dayjs from "dayjs";
 
-// ✅ 세션 임시 저장 (메모리 기반, 실제 환경에서는 Redis나 DB도 가능)
+// ✅ 세션 임시 저장
 const sessionContext = {};
 
 export default async function reservePersonal(kakaoId, utterance, res) {
@@ -16,17 +17,18 @@ export default async function reservePersonal(kakaoId, utterance, res) {
     return res.json(replyText("먼저 회원 등록이 필요합니다."));
   }
 
+  // ✅ 파서 결과 → ISO date list
   const parsed = parseNaturalDateTime(utterance);
 
-// 👉 parse 결과가 배열이라면
-if (!parsed || !Array.isArray(parsed) || parsed.length === 0) {
-  return res.json(replyText("예약할 날짜와 시간을 이해하지 못했어요. 예: '오늘 3시', '수요일 오전 8시'"));
-}
+  if (!parsed || !Array.isArray(parsed) || parsed.length === 0) {
+    return res.json(replyText("예약할 날짜와 시간을 이해하지 못했어요. 예: '오늘 3시', '수요일 오전 8시'"));
+  }
 
-const date = parsed[0]; // ✅ 예약은 하나의 날짜만 있으면 됨
+  const rawDate = parsed[0];
+  const time = dayjs(rawDate);
 
-  // ✅ 오전/오후가 불명확하면 다시 질문
-  if (amOrPmRequired) {
+  // ✅ 오전/오후 명확하지 않으면 멀티턴 전환
+  if (time.hour() === 0 || time.hour() === 3 || time.hour() === 5 || time.hour() === 7 || time.hour() === 9) {
     sessionContext[kakaoId] = {
       type: "pending-am-or-pm",
       member_id: member.id,
@@ -38,11 +40,11 @@ const date = parsed[0]; // ✅ 예약은 하나의 날짜만 있으면 됨
   return await confirmReservation(member.id, time, res);
 }
 
-// ✅ 확정 예약 로직
+// ✅ 확정 예약 처리
 export async function confirmReservation(memberId, time, res) {
   const reservationTime = time.toISOString();
 
-  // 같은 시간에 본인 예약 여부 확인
+  // 중복 예약 확인
   const { data: existing } = await supabase
     .from("reservations")
     .select("id")
@@ -67,7 +69,7 @@ export async function confirmReservation(memberId, time, res) {
     return res.json(replyText("해당 시간은 예약이 마감되었습니다. 다른 시간을 선택해주세요."));
   }
 
-  // 예약 등록
+  // 예약 저장
   const { error } = await supabase
     .from("reservations")
     .insert({
