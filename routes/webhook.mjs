@@ -25,9 +25,6 @@ import {
 import confirmPendingTime from "../handlers/booking/confirmPendingTime.mjs";
 import confirmCancelPendingTime from "../handlers/booking/confirmCancelPendingTime.mjs";
 import cancelPersonal from "../handlers/booking/cancelPersonal.mjs";
-import showSlotStatus, {
-  confirmSlotStatus
-} from "../handlers/booking/showSlotStatus.mjs";
 
 // 과제
 import assignment from "../handlers/assignment/index.mjs";
