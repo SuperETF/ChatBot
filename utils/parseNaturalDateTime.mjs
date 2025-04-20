@@ -1,3 +1,4 @@
+// ✅ utils/parseNaturalDateTime.mjs
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat.js";
 import weekday from "dayjs/plugin/weekday.js";
@@ -9,83 +10,78 @@ dayjs.extend(weekday);
 dayjs.extend(isSameOrAfter);
 dayjs.locale(ko);
 
-const WEEKDAYS = {
-  "일": 0, "월": 1, "화": 2, "수": 3, "목": 4, "금": 5, "토": 6
-};
-
 /**
- * 자연어 시간/날짜 파서
- * @param {string} utterance - 사용자 발화
- * @returns {Array<string>} ISO 날짜 배열 or null
+ * 간단 버전 예시:
+ * - "오늘 3시", "내일 오후 2시 30분", "모레 3:30" 등을 인식
+ * - 결과: ['2025-04-20T15:00:00.000Z', ...] 형태
  */
 export function parseNaturalDateTime(utterance) {
   const now = dayjs().second(0);
-  const baseDate = now.startOf("day");
 
-  // 이번 주 월수금
-  if (/이번\s*주.*[월화수목금토일]/.test(utterance)) {
-    const days = utterance.match(/[월화수목금토일]/g);
-    const baseWeek = now.startOf("week").add(1, "day"); // 월요일
-    const dates = days.map(day => {
-      const weekdayNum = WEEKDAYS[day];
-      return baseWeek.day(weekdayNum).format("YYYY-MM-DD");
-    });
-    return [...new Set(dates)].sort();
+  // 정규식: (오늘|내일|모레)? (오전|오후)? (3시 30분 or 3:30 or 3시)
+  // 그룹화해서 시/분을 추출
+  const timeRegex = new RegExp(
+    `(오늘|내일|모레)?\\s*` +        // 1) dayKeyword
+    `(오전|오후)?\\s*` +            // 2) ampm
+    `(?:(\\d{1,2})시\\s*(\\d{1,2})?\\s*분?|` + // 3,4 => "3시 30분"
+      `(\\d{1,2}):(\\d{1,2})|` +             // 5,6 => "3:30"
+      `(\\d{1,2})시)` +                     // 7 => "3시"
+    `(\\s*쯤)?`,                             // 8 => "쯤" (옵션)
+    "gi"
+  );
+
+  const matches = [...utterance.matchAll(timeRegex)];
+  if (matches.length === 0) {
+    // 다른 예: “3시”만 있는데 앞뒤가 전혀 없을 수도 있으므로 추가 로직 or null
+    return null;
   }
 
-  // 내일부터 N일간
-  const rangeMatch = utterance.match(/내일.*?(\d+)\s*일/);
-  if (rangeMatch) {
-    const count = parseInt(rangeMatch[1], 10);
-    return Array.from({ length: count }, (_, i) =>
-      baseDate.add(i + 1, "day").format("YYYY-MM-DD")
-    );
-  }
+  const results = [];
 
-  // 오전/오후 + 시 또는 시 + 오전/오후
-  const ampmMatch = utterance.match(/(오전|오후)\s*(\d{1,2})시|(\d{1,2})시\s*(오전|오후)/);
-  if (ampmMatch) {
-    let hour = parseInt(ampmMatch[2] || ampmMatch[3], 10);
-    const period = ampmMatch[1] || ampmMatch[4];
-    if (period === "오후" && hour < 12) hour += 12;
-    if (period === "오전" && hour === 12) hour = 0;
-    return [baseDate.hour(hour).format("YYYY-MM-DD")];
-  }
+  for (const match of matches) {
+    const dayKeyword = match[1];  // 오늘|내일|모레
+    const ampm = match[2];       // 오전|오후
 
-  // 오늘 3시
-  const todayMatch = utterance.match(/오늘\s*(\d{1,2})시/);
-  if (todayMatch) {
-    const hour = parseInt(todayMatch[1], 10);
-    return [baseDate.hour(hour).format("YYYY-MM-DD")];
-  }
-
-  // 내일 3시
-  const tomorrowMatch = utterance.match(/내일\s*(\d{1,2})시/);
-  if (tomorrowMatch) {
-    const hour = parseInt(tomorrowMatch[1], 10);
-    return [baseDate.add(1, "day").hour(hour).format("YYYY-MM-DD")];
-  }
-
-  // 요일 + 시
-  const weekdayMatch = utterance.match(/(월|화|수|목|금|토|일)(요일)?\s*(\d{1,2})시/);
-  if (weekdayMatch) {
-    const weekdayName = weekdayMatch[1];
-    const hour = parseInt(weekdayMatch[3], 10);
-    const targetWeekday = WEEKDAYS[weekdayName];
-    let target = baseDate;
-    while (target.day() !== targetWeekday || target.isBefore(now, "day")) {
-      target = target.add(1, "day");
+    let hour, minute = 0;
+    if (match[3]) {
+      // "3시 30분" → match[3] = 3, match[4] = 30
+      hour = parseInt(match[3], 10) || 0;
+      if (match[4]) {
+        minute = parseInt(match[4], 10) || 0;
+      }
+    } else if (match[5]) {
+      // "3:30" → match[5] = 3, match[6] = 30
+      hour = parseInt(match[5], 10) || 0;
+      minute = parseInt(match[6], 10) || 0;
+    } else if (match[7]) {
+      // "3시" → match[7] = 3
+      hour = parseInt(match[7], 10) || 0;
+    } else {
+      hour = 0;
     }
-    return [target.hour(hour).format("YYYY-MM-DD")];
+
+    // 오전/오후 보정
+    if (ampm === "오후" && hour < 12) {
+      hour += 12;
+    }
+    if (ampm === "오전" && hour === 12) {
+      hour = 0;
+    }
+
+    // 오늘/내일/모레 보정
+    let base = now.clone();
+    if (dayKeyword === "내일") {
+      base = base.add(1, "day");
+    } else if (dayKeyword === "모레") {
+      base = base.add(2, "day");
+    }
+    // (오늘은 추가 연산 X)
+
+    // 최종 시간 세팅
+    base = base.hour(hour).minute(minute).second(0);
+
+    results.push(base.toISOString());
   }
 
-  // 단순 시각
-  const simpleMatch = utterance.match(/(\d{1,2})시/);
-  if (simpleMatch) {
-    const hour = parseInt(simpleMatch[1], 10);
-    return [baseDate.hour(hour).format("YYYY-MM-DD")];
-  }
-
-  console.warn("📛 parseNaturalDateTime 실패:", utterance);
-  return null;
+  return results.length > 0 ? results.sort() : null;
 }

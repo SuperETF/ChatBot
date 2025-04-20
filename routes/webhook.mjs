@@ -2,6 +2,8 @@
 import express from "express";
 import { replyText } from "../utils/reply.mjs";
 import { parseNaturalDateTime } from "../utils/parseNaturalDateTime.mjs";
+
+// 세션들
 import {
   assignmentSession,
   reserveSession,
@@ -12,11 +14,16 @@ import {
 import fallback from "../handlers/system/fallback.mjs";
 import { supabase } from "../services/supabase.mjs";
 
+// 회원·전문가 등록 등
 import * as auth from "../handlers/auth/index.mjs";
 import assignment from "../handlers/assignment/index.mjs";
 import assignRoutineToMember from "../handlers/assignment/assignRoutineToMember.mjs";
 
-import { reservePersonal } from "../handlers/booking/reservePersonal.mjs";
+// 예약 관련
+import {
+  reservePersonal,
+  handleMultiTurnReserve as handleReserveMulti
+} from "../handlers/booking/reservePersonal.mjs";
 import cancelPersonal from "../handlers/booking/cancelPersonal.mjs";
 import showSlotStatus, {
   confirmSlotStatus
@@ -29,51 +36,63 @@ import dayjs from "dayjs";
 const router = express.Router();
 
 /**
- * 조금 더 유연해진 정규식 패턴들.
- * 실제 환경에 맞춰 필요시 계속 확장하거나 수정 가능.
+ * 조금 더 유연해진 정규식 패턴.
+ * "예약해줘", "운동해줄래", "스케줄 가능해?" 등 파생 표현과
+ * 시간(오후 3시, 3시 30분) 순서를 무시하고 모두 매칭하기 위해 OR(|)로 구성.
  */
+const RESERVE_KEYWORDS = `(?:
+  예약(?:해|해줘|좀|해주세요|해줄래)? |
+  운동(?:해|좀| 할래| 가능해| 해줄래| 잡아줘)? |
+  레슨 |
+  pt |
+  스케줄 |
+  스케쥴
+)`;
+
+const TIME_PATTERN = `(?:
+  (오늘|내일|모레|이번주|다음주)?\\s*
+  (오전|오후)?\\s*
+  (?:
+    \\d{1,2}시\\s*(\\d{1,2})?\\s*분? |
+    \\d{1,2}:\\d{1,2} |
+    \\d{1,2}시
+  )
+  (\\s*쯤)?
+)`;
+
+// 예약 의도 정규식: 시간→키워드 | 키워드→시간
+const RESERVE_INTENT = new RegExp(
+  [
+    // 1) 시간 먼저, 뒤에 예약 키워드
+    `(${TIME_PATTERN}).*(${RESERVE_KEYWORDS})`,
+    // 2) 예약 키워드 먼저, 뒤에 시간
+    `(${RESERVE_KEYWORDS}).*(${TIME_PATTERN})`
+  ].join("|"),
+  "i"
+);
+
 const REGEX = {
   // 오전/오후 단일 발화
   AM_OR_PM: /^(오전|오후)$/,
 
-  // 전문가/트레이너 등록 (예: "전문가 홍길동 01012345678 1234")
+  // 전문가/트레이너 등록
   REGISTER_TRAINER: /^(전문가|코치|트레이너)\s+[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/,
 
-  // 회원 등록 (예: "회원 김철수 01012345678 1234" or "김철수 01012345678 1234")
+  // 회원 등록
   REGISTER_MEMBER_PREFIX: /^(회원|멤버)\s+[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/,
   REGISTER_MEMBER_ONLY: /^[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/,
 
-  // 회원 목록(조회) 관련
+  // 회원 목록
   LIST_MEMBERS: /(회원|멤버)(목록|조회|내역|현황)/,
 
-  /**
-   * 예약/운동/레슨 인식
-   *  - 오늘/내일/모레/이번주/다음주 등 날짜 표현
-   *  - 오전/오후
-   *  - 시 단위
-   */
-  RESERVE_INTENT: new RegExp(
-    `(` +
-      `(운동|레슨|예약|pt|스케줄|스케쥴)` + // 예약을 의미하는 키워드
-      `)` +
-      `.*(` +
-      `(오늘|내일|모레|이번주|다음주)?` + // 날짜 표현 (선택)
-      `\\s*(오전|오후)?\\s*\\d{1,2}\\s*시` + // 시간 표현
-      `)`,
-    "i"
-  ),
+  // 예약 Intent (확장판)
+  RESERVE_INTENT,
 
-  // 취소 의도 (예: "10시 취소해줘", "오전 10시 취소")
-  CANCEL_INTENT: new RegExp(
-    `(취소|캔슬|cancel).*(\\d{1,2}\\s*시)`, 
-    "i"
-  ),
+  // 취소 Intent
+  CANCEL_INTENT: new RegExp(`(취소|캔슬|cancel).*(\\d{1,2}\\s*시)`, "i"),
 
-  // 잔여 현황 확인 (예: "10시 자리 있나요?", "오후 3시 몇 명 가능?")
-  STATUS_INTENT: new RegExp(
-    `(몇\\s*명|현황|자리\\s*있어|가능|얼마나).*(\\d{1,2}\\s*시)`,
-    "i"
-  ),
+  // 잔여 현황 확인
+  STATUS_INTENT: new RegExp(`(몇\\s*명|현황|자리\\s*있어|가능|얼마나).*(\\d{1,2}\\s*시)`, "i"),
 
   // 과제 intent
   TODAY_ASSIGNMENT: /(오늘\s*과제|과제\s*있어|오늘\s*숙제)/,
@@ -81,13 +100,13 @@ const REGEX = {
   START_ASSIGNMENT: /(과제\s*시작|숙제\s*시작|시작하기|개시)/,
   FINISH_ASSIGNMENT: /(과제\s*종료|숙제\s*종료|종료하기|끝|마침)/,
 
-  // 특정 동작(운동명) + 날짜/요일 매칭 (예: "스쿼트 매일", "푸시업 내일부터", "런지 목요일에")
+  // 특정 운동 + 날짜/요일
   ASSIGN_WORKOUT: new RegExp(
     `[가-힣]{2,10}.*(스쿼트|런지|플랭크|버피|푸시업|과제|숙제).*(매일|오늘|내일|모레|[0-9]{1,2}일|월|화|수|목|금|토|일)`,
     "i"
   ),
 
-  // 루틴(추천/생성/등록/만들) 의도
+  // 루틴 생성/추천
   CREATE_ROUTINE: new RegExp(
     `(루틴\\s*(추천|생성|등록|만들))|` +
       `((추천|생성|등록|만들)\\s*루틴)|` +
@@ -96,7 +115,7 @@ const REGEX = {
     "i"
   ),
 
-  // 루틴 배정(사람 이름 + "루틴 배정")
+  // 루틴 배정
   ASSIGN_ROUTINE: /^[가-힣]{2,10}(?:\s+루틴\s*배정)?$/
 };
 
@@ -109,23 +128,30 @@ router.post("/", async (req, res) => {
 
   try {
     /**
-     * (1) 오전/오후 응답 처리 (멀티턴)
-     *     - 기존 세션 상태(reserveSession/cancelSession/statusSession)가 대기중인지에 따라
-     *       confirmPendingTime, confirmCancelPendingTime, confirmSlotStatus를 수행
+     * STEP A) 먼저 "예약 멀티턴" 상태인지 확인
+     *         - 예약 흐름(pending-date / pending-confirm 등) 중이면
+     *           handleReserveMulti()가 우선 처리
+     */
+    if (reserveSession[kakaoId]?.type) {
+      return handleReserveMulti(kakaoId, utterance, res);
+    }
+
+    /**
+     * STEP B) 오전/오후 단일 발화 처리
      */
     if (REGEX.AM_OR_PM.test(utterance)) {
       const isAm = utterance.includes("오전");
       const isPm = utterance.includes("오후");
 
-      // 예약 세션이 대기 중인 경우
+      // 예약 세션
       if (reserveSession[kakaoId]?.type === "pending-am-or-pm") {
         return confirmPendingTime(kakaoId, utterance, res);
       }
-      // 취소 세션이 대기 중인 경우
+      // 취소 세션
       if (cancelSession[kakaoId]?.type === "pending-cancel-confirmation") {
         return confirmCancelPendingTime(kakaoId, utterance, res);
       }
-      // 상태 확인 세션이 대기 중인 경우
+      // 상태 확인 세션
       if (statusSession[kakaoId]?.type === "pending-status-confirmation") {
         let time = dayjs(statusSession[kakaoId].base_time);
         if (isPm && time.hour() < 12) time = time.add(12, "hour");
@@ -138,11 +164,9 @@ router.post("/", async (req, res) => {
     }
 
     /**
-     * (2) 등록/로그인 Intent (전문가/회원 구분)
-     *     - 첫 줄 기준으로 구분
+     * (1) 등록/로그인 Intent
      */
     if (REGEX.REGISTER_TRAINER.test(firstLine)) {
-      console.log("✅ 전문가 등록 인식됨:", firstLine);
       return auth.auth(kakaoId, utterance, res, "registerTrainer");
     }
     if (REGEX.REGISTER_MEMBER_PREFIX.test(firstLine)) {
@@ -153,7 +177,7 @@ router.post("/", async (req, res) => {
     }
 
     /**
-     * (3) 회원 목록 조회
+     * (2) 회원 목록 조회
      */
     const normalized = utterance.replace(/\s+/g, "");
     if (REGEX.LIST_MEMBERS.test(normalized)) {
@@ -161,25 +185,25 @@ router.post("/", async (req, res) => {
     }
 
     /**
-     * (4) 예약 관련 Intent
-     *     - 정규식 순서가 중요하므로 하단에 유지.
+     * (3) 예약 Intent
      */
-    // 예약
     if (REGEX.RESERVE_INTENT.test(utterance)) {
       console.log("✅ 예약 intent 매칭됨:", utterance);
       return reservePersonal(kakaoId, utterance, res);
     }
+
     // 취소
     if (REGEX.CANCEL_INTENT.test(utterance)) {
       return cancelPersonal(kakaoId, utterance, res);
     }
+
     // 잔여 현황
     if (REGEX.STATUS_INTENT.test(utterance)) {
       return showSlotStatus(kakaoId, utterance, res);
     }
 
     /**
-     * (5) 과제/숙제 관련 Intent
+     * (4) 과제/숙제 관련
      */
     if (REGEX.TODAY_ASSIGNMENT.test(utterance)) {
       return assignment(kakaoId, utterance, res, "getTodayAssignment");
@@ -195,14 +219,14 @@ router.post("/", async (req, res) => {
     }
 
     /**
-     * (6) 특정 운동 + 날짜 패턴 (과제 배정)
+     * (5) 특정 운동 + 날짜/요일
      */
     if (REGEX.ASSIGN_WORKOUT.test(utterance)) {
       return assignment(kakaoId, utterance, res, "assignWorkout");
     }
 
     /**
-     * (7) 루틴 생성/추천/등록
+     * (6) 루틴 생성/추천/등록/배정
      */
     if (REGEX.CREATE_ROUTINE.test(utterance)) {
       return assignment(kakaoId, utterance, res, "generateRoutinePreview");
@@ -211,7 +235,7 @@ router.post("/", async (req, res) => {
       return assignment(kakaoId, utterance, res, "assignRoutineToMember");
     }
 
-    // 루틴 날짜 입력(멀티턴)
+    // 멀티턴: 루틴 날짜 입력
     if (assignmentSession[kakaoId]?.type === "pending-routine-dates") {
       const { trainerId, memberId, routineList } = assignmentSession[kakaoId];
       delete assignmentSession[kakaoId];
@@ -226,7 +250,7 @@ router.post("/", async (req, res) => {
     }
 
     /**
-     * (8) 모든 조건에 해당하지 않을 경우 fallback
+     * (7) 매칭 안 될 경우 fallback
      */
     return fallback(utterance, kakaoId, res, "none", "none");
   } catch (error) {
