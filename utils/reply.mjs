@@ -1,12 +1,16 @@
 // ✅ utils/reply.mjs
-
-export function replySimpleText(text) {
+/**
+ * 단순 텍스트 응답
+ */
+export function replyText(text) {
   return {
     version: "2.0",
     template: {
       outputs: [
         {
-          simpleText: { text }
+          simpleText: {
+            text
+          }
         }
       ]
     }
@@ -14,7 +18,9 @@ export function replySimpleText(text) {
 }
 
 /**
- * QuickReplies (단일 simpleText + 여러 버튼)
+ * QuickReplies 응답
+ * - simpleText + 여러 버튼
+ * - 버튼(label/action/messageText 동일)
  */
 export function replyQuickReplies(text, quickReplies = []) {
   return {
@@ -22,7 +28,9 @@ export function replyQuickReplies(text, quickReplies = []) {
     template: {
       outputs: [
         {
-          simpleText: { text }
+          simpleText: {
+            text
+          }
         }
       ],
       quickReplies: quickReplies.map(label => ({
@@ -35,7 +43,8 @@ export function replyQuickReplies(text, quickReplies = []) {
 }
 
 /**
- * BasicCard (타이틀/내용/버튼)
+ * BasicCard 응답
+ * - { title, description, buttons[] }
  */
 export function replyBasicCard({ title, description, buttons = [] }) {
   return {
@@ -59,9 +68,8 @@ export function replyBasicCard({ title, description, buttons = [] }) {
 }
 
 /**
- * replyButton
- *  - fallback에서 사용하기 위한 alias 함수
- *  - 내부적으로 replyQuickReplies를 호출
+ * 버튼(QuickReplies) 별칭 함수
+ * - fallback 등에서 "replyButton" 이름을 쓰고 싶을 때
  */
 export function replyButton(text, buttons = []) {
   return replyQuickReplies(text, buttons);

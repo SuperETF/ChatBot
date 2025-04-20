@@ -1,22 +1,20 @@
-// 📄 handlers/system/fallback.mjs
+// ✅ handlers/system/fallback.mjs
 import { replyButton } from "../../utils/reply.mjs";
 import { supabase } from "../../services/supabase.mjs";
 
 /**
  * fallback
- * - 인식하지 못한 발화나, 매칭된 handler/action이 없는 경우
- * - fallback_logs 테이블에 로그 저장
+ * - 발화 인식 실패 or handler/action 없음
+ * - fallback_logs 테이블에 로그 저장 + QuickReplies 안내
  */
 export default async function fallback(utterance, kakaoId, res, handler = null, action = null) {
   console.warn("🔁 fallback triggered:", utterance);
 
-  // handler/action이 분류되었지만 실제 함수가 없어서 실패한 경우
   if (handler || action) {
     console.warn("⚠️ 실행 가능한 핸들러/액션이 없음:", { handler, action });
   }
 
   try {
-    // DB 로그 저장
     const { error } = await supabase.from("fallback_logs").insert({
       kakao_id: kakaoId,
       utterance,
@@ -24,10 +22,8 @@ export default async function fallback(utterance, kakaoId, res, handler = null, 
       handler: handler || "fallback",
       action: action || null,
       error_message: null,
-      note: "fallback.mjs triggered",
-      model_used: "fallback-handler"
+      note: "fallback.mjs triggered"
     });
-
     if (error) {
       console.error("❌ fallback_logs insert 실패:", error.message);
     }
@@ -35,7 +31,7 @@ export default async function fallback(utterance, kakaoId, res, handler = null, 
     console.error("🔥 fallback_logs insert 예외 발생:", e.message);
   }
 
-  // QuickReplies로 재시도 안내
+  // QuickReplies
   return res.json(
     replyButton(
       "🤔 말씀하신 내용을 잘 이해하지 못했어요.\n어떻게 도와드릴까요?",
