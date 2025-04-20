@@ -51,7 +51,8 @@ router.post("/", async (req, res) => {
     }
 
     // ✅ 등록 intent (순서 중요!)
-    if (/^전문가\s+[가-힣]{2,10}\s+01[016789][0-9]{7,8}$/.test(firstLine)) {
+    if (/^전문가\s+[가-힣]{2,10}\s+01[016789][0-9]{7,8}\s+\d{4}$/.test(firstLine)) {
+      console.log("✅ 전문가 등록 인식됨:", firstLine);
       return auth.auth(kakaoId, utterance, res, "registerTrainer");
     }
     if (/^회원\s+[가-힣]{2,10}\s+01[016789][0-9]{7,8}\s+\d{4}$/.test(firstLine)) {
