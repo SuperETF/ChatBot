@@ -1,7 +1,8 @@
-// ✅ routes/webhook.mjs
+// ✅ src/routes/webhook.mjs
+
 import express from "express";
 import dayjs from "dayjs";
-import { supabase } from "../services/supabase.mjs";
+import { supabase } from "../../services/supabase.mjs";
 
 // 세션
 import {
@@ -9,34 +10,37 @@ import {
   cancelSession,
   assignmentSession,
   statusSession
-} from "../utils/sessionContext.mjs";
+} from "../../utils/sessionContext.mjs";
 
-// 헬퍼
-import fallback from "../handlers/system/fallback.mjs";
-import { parseNaturalDateTime } from "../utils/parseNaturalDateTime.mjs";
+// fallback
+import fallback from "../../handlers/system/fallback.mjs";
 
 // 예약(booking) 관련
 import {
   reservePersonal,
   handleMultiTurnReserve as handleReserveMulti
-} from "../handlers/booking/reservePersonal.mjs";
-import confirmPendingTime from "../handlers/booking/confirmPendingTime.mjs";
-import confirmCancelPendingTime from "../handlers/booking/confirmCancelPendingTime.mjs";
-import cancelPersonal from "../handlers/booking/cancelPersonal.mjs";
+} from "../../handlers/booking/reservePersonal.mjs";
+
+import confirmPendingTime from "../../handlers/booking/confirmPendingTime.mjs";
+import confirmCancelPendingTime from "../../handlers/booking/confirmCancelPendingTime.mjs";
+import cancelPersonal from "../../handlers/booking/cancelPersonal.mjs";
+
+// 잔여 현황
 import showSlotStatus, {
   confirmSlotStatus
-} from "../handlers/booking/showSlotStatus.mjs";
+} from "../../handlers/booking/showSlotStatus.mjs";
 
 // 과제(assignment) 관련
-import assignment from "../handlers/assignment/index.mjs";
-import assignRoutineToMember from "../handlers/assignment/assignRoutineToMember.mjs";
+import assignment from "../../handlers/assignment/index.mjs";
+import assignRoutineToMember from "../../handlers/assignment/assignRoutineToMember.mjs";
 
 // 회원 등록(auth) 관련
-import * as auth from "../handlers/auth/index.mjs";
+import * as auth from "../../handlers/auth/index.mjs";
 
-// (replyText 등은 각 핸들러 내부에서 import { replyText } from "../../utils/reply.mjs" 식으로 사용)
+// utils
+import { parseNaturalDateTime } from "../../utils/parseNaturalDateTime.mjs";
 
-// 라우터 초기화
+
 const router = express.Router();
 
 /**
@@ -44,23 +48,18 @@ const router = express.Router();
  */
 const REGEX = {
   AM_OR_PM: /^(오전|오후)$/,
-  
-  // "전문가 홍길동 01012345678 1234"
   REGISTER_TRAINER: /^(전문가|코치|트레이너)\s+[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/,
-  
-  // "회원 김철수 01012345678 1234", "김철수 01012345678 1234"
   REGISTER_MEMBER_PREFIX: /^(회원|멤버)\s+[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/,
   REGISTER_MEMBER_ONLY: /^[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/,
-
   LIST_MEMBERS: /(회원|멤버)(목록|조회|내역|현황)/,
 
-  // 예약 키워드 (예: "3시 운동 예약해줘", "운동 3시" 등)
+  // 예약 키워드 예: "3시 운동 예약" 등
   RESERVE_INTENT: new RegExp(`(운동|예약|레슨).*?(\\d{1,2}\\s*시)`, "i"),
 
   // 취소 의도
   CANCEL_INTENT: new RegExp(`(취소|캔슬|cancel).*(\\d{1,2}\\s*시)`, "i"),
 
-  // 잔여 현황 (ex: "3시 자리 있나요?")
+  // 잔여 현황
   STATUS_INTENT: new RegExp(`(자리|현황|가능).*(\\d{1,2}\\s*시)`, "i"),
 
   // 과제 intent
@@ -69,7 +68,7 @@ const REGEX = {
   START_ASSIGNMENT: /(과제\s*시작|숙제\s*시작|시작하기|개시)/,
   FINISH_ASSIGNMENT: /(과제\s*종료|숙제\s*종료|종료하기|끝|마침)/,
 
-  // 특정 동작(운동명) + 날짜/요일
+  // 운동명 + 날짜
   ASSIGN_WORKOUT: new RegExp(
     `[가-힣]{2,10}.*(스쿼트|런지|플랭크|버피|푸시업|과제|숙제).*(매일|오늘|내일|모레|[0-9]{1,2}일|월|화|수|목|금|토|일)`,
     "i"
@@ -83,7 +82,6 @@ const REGEX = {
       `(상체.*(추천|루틴))`,
     "i"
   ),
-
   // 루틴 배정
   ASSIGN_ROUTINE: /^[가-힣]{2,10}(?:\s+루틴\s*배정)?$/
 };
@@ -96,45 +94,38 @@ router.post("/", async (req, res) => {
   console.log("🟡 발화 입력:", utterance);
 
   try {
-    /**
-     * 1) 예약 멀티턴 진행 중?
-     */
+    // 1) 예약 멀티턴 세션
     if (reserveSession[kakaoId]?.type) {
-      // 예: "pending-date", "pending-confirm"
       return handleReserveMulti(kakaoId, utterance, res);
     }
 
-    /**
-     * 2) 오전/오후 단일 발화 (ex: "오전", "오후")
-     */
+    // 2) 오전/오후 단일 발화
     if (REGEX.AM_OR_PM.test(utterance)) {
-      // 예약 - 오전/오후
+      const isAm = utterance.includes("오전");
+      const isPm = utterance.includes("오후");
+
+      // 예약 세션
       if (reserveSession[kakaoId]?.type === "pending-am-or-pm") {
         return confirmPendingTime(kakaoId, utterance, res);
       }
-      // 취소 - 오전/오후
+      // 취소 세션
       if (cancelSession[kakaoId]?.type === "pending-cancel-confirmation") {
         return confirmCancelPendingTime(kakaoId, utterance, res);
       }
-      // 잔여 현황 - 오전/오후
+      // 잔여 현황 세션
       if (statusSession[kakaoId]?.type === "pending-status-confirmation") {
         let time = dayjs(statusSession[kakaoId].base_time);
-        const isAm = utterance.includes("오전");
-        const isPm = utterance.includes("오후");
         if (isPm && time.hour() < 12) time = time.add(12, "hour");
         if (isAm && time.hour() >= 12) time = time.subtract(12, "hour");
-
         delete statusSession[kakaoId];
         return confirmSlotStatus(kakaoId, time, res);
       }
 
-      // 세션이 없다면...
-      return fallback(utterance, kakaoId, res, "am/pm", null);
+      // 세션이 없다면 fallback
+      return fallback(utterance, kakaoId, res, "am-or-pm", null);
     }
 
-    /**
-     * 3) 회원/전문가 등록
-     */
+    // 3) 전문가/회원 등록
     if (REGEX.REGISTER_TRAINER.test(firstLine)) {
       return auth.auth(kakaoId, utterance, res, "registerTrainer");
     }
@@ -145,15 +136,13 @@ router.post("/", async (req, res) => {
       return auth.auth(kakaoId, utterance, res, "registerMember");
     }
 
-    // 회원 목록 조회
+    // 회원 목록
     const normalized = utterance.replace(/\s+/g, "");
     if (REGEX.LIST_MEMBERS.test(normalized)) {
       return auth.auth(kakaoId, utterance, res, "listMembers");
     }
 
-    /**
-     * 4) 예약 Intent
-     */
+    // 4) 예약 Intent
     if (REGEX.RESERVE_INTENT.test(utterance)) {
       console.log("✅ 예약 intent 매칭됨:", utterance);
       return reservePersonal(kakaoId, utterance, res);
@@ -169,9 +158,7 @@ router.post("/", async (req, res) => {
       return showSlotStatus(kakaoId, utterance, res);
     }
 
-    /**
-     * 5) 과제/숙제 관련
-     */
+    // 5) 과제/숙제
     if (REGEX.TODAY_ASSIGNMENT.test(utterance)) {
       return assignment(kakaoId, utterance, res, "getTodayAssignment");
     }
@@ -190,7 +177,7 @@ router.post("/", async (req, res) => {
       return assignment(kakaoId, utterance, res, "assignWorkout");
     }
 
-    // 루틴 생성(미리보기)
+    // 루틴 생성/추천
     if (REGEX.CREATE_ROUTINE.test(utterance)) {
       return assignment(kakaoId, utterance, res, "generateRoutinePreview");
     }
@@ -211,14 +198,12 @@ router.post("/", async (req, res) => {
       return assignRoutineToMember(trainerId, memberId, routineList, dateList, res);
     }
 
-    /**
-     * 6) 모든 케이스가 아니면 fallback
-     */
-    return fallback(utterance, kakaoId, res, "fallback", null);
+    // 6) 모두 아니면 fallback
+    return fallback(utterance, kakaoId, res, "none", null);
+
   } catch (error) {
     console.error("💥 webhook error:", error);
 
-    // fallback_logs
     await supabase.from("fallback_logs").insert({
       kakao_id: kakaoId,
       utterance,
@@ -227,7 +212,7 @@ router.post("/", async (req, res) => {
       note: "webhook catch"
     });
 
-    return fallback(utterance, kakaoId, res, "error-catch", null);
+    return fallback(utterance, kakaoId, res, "catch-error", null);
   }
 });
 
