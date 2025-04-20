@@ -68,21 +68,28 @@ router.post("/", async (req, res) => {
     }
 
     // ✅ 예약 관련 intent
-    if (/예약\s*내역|내\s*예약|운동\s*몇\s*시|레슨\s*몇\s*시/.test(utterance)) {
-      return showMyReservations(kakaoId, utterance, res);
-    }
-    if (/취소/.test(utterance) && /\d{1,2}시/.test(utterance)) {
-      return cancelPersonal(kakaoId, utterance, res);
-    }
-    if (/몇\s*명|현황|자리\s*있어/.test(utterance) && /\d{1,2}시/.test(utterance)) {
-      return showSlotStatus(kakaoId, utterance, res);
-    }
-    if (
-      /(운동|레슨|예약|PT|신청)/.test(utterance) &&
-      /(\d{1,2}시|오전\s*\d{1,2}시|오후\s*\d{1,2}시)/.test(utterance)
-    ) {
-      return reservePersonal(kakaoId, utterance, res);
-    }
+if (/예약\s*내역|내\s*예약|운동\s*몇\s*시|레슨\s*몇\s*시/.test(utterance)) {
+  return showMyReservations(kakaoId, utterance, res);
+}
+
+if (/취소/.test(utterance) && /\d{1,2}\s*시/.test(utterance)) {
+  return cancelPersonal(kakaoId, utterance, res);
+}
+
+if (/몇\s*명|현황|자리\s*있어/.test(utterance) && /\d{1,2}\s*시/.test(utterance)) {
+  return showSlotStatus(kakaoId, utterance, res);
+}
+
+// ✅ 개인 운동 예약 intent (자연어 순서 유연 대응)
+if (
+  /(운동|레슨|예약|PT|신청|가능)/.test(utterance) &&
+  /(오늘|내일|이번주)?\s*(오전|오후)?\s*\d{1,2}\s*시/.test(utterance)
+) {
+  return reservePersonal(kakaoId, utterance, res);
+}
+console.log("✅ 예약 intent 매칭됨:", utterance);
+
+
     // ✅ 과제 관련 intent
     if (/오늘\s*과제|과제\s*있어/.test(utterance)) {
       return assignment(kakaoId, utterance, res, "getTodayAssignment");
