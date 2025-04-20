@@ -49,11 +49,14 @@ function replyQuickReplies(text, quickReplies = []) {
   };
 }
 
-// 예약 세션
+// ■ 예약 세션 상태 저장
 export const sessionContext = {};
 
+/**
+ * 1) 사용자 발화로 "운동 예약"이 탐지되었을 때 진입하는 메인 함수
+ */
 export async function reservePersonal(kakaoId, utterance, res) {
-  // (1) 회원 확인
+  // (A) 회원 여부 확인
   const { data: member } = await supabase
     .from("members")
     .select("id")
@@ -64,10 +67,10 @@ export async function reservePersonal(kakaoId, utterance, res) {
     return res.json(replySimpleText("먼저 회원 등록이 필요합니다."));
   }
 
-  // (2) 날짜/시간 파싱
-  const dateArray = parseNaturalDateTime(utterance); 
+  // (B) 날짜/시간 파싱
+  const dateArray = parseNaturalDateTime(utterance);
   if (!dateArray || dateArray.length === 0) {
-    // 파싱 실패 → 날짜를 다시 물어본다
+    // 파싱 실패 → 날짜를 다시 물어봄
     sessionContext[kakaoId] = {
       type: "pending-date",
       member_id: member.id
@@ -77,18 +80,18 @@ export async function reservePersonal(kakaoId, utterance, res) {
     );
   }
 
-  // 여기선 첫 번째 값만 사용 (복수개가 나올 수도 있으므로)
+  // 복수 날짜가 반환되었어도 여기서는 첫 번째만 사용
   const isoString = dateArray[0];
   const finalTime = dayjs(isoString);
 
-  // (3) 최종 확인 멀티턴
+  // (C) 예약 확정 전 멀티턴
   sessionContext[kakaoId] = {
     type: "pending-confirm",
     member_id: member.id,
     base_time: finalTime.toISOString()
   };
 
-  // BasicCard로 “네” / “다른 시간” 버튼
+  // BasicCard로 “네” / “아니오” 버튼
   return res.json(
     replyBasicCard({
       title: "운동 예약 확인",
@@ -101,7 +104,9 @@ export async function reservePersonal(kakaoId, utterance, res) {
   );
 }
 
-// 멀티턴 후속 처리
+/**
+ * 2) 예약 멀티턴(날짜 재확인, 최종확인 등) 처리
+ */
 export async function handleMultiTurnReserve(kakaoId, utterance, res) {
   const session = sessionContext[kakaoId];
   if (!session) {
@@ -109,7 +114,7 @@ export async function handleMultiTurnReserve(kakaoId, utterance, res) {
   }
 
   switch (session.type) {
-    // 날짜를 못잡았을 때 물어본 상태
+    // 날짜를 못 잡았을 때
     case "pending-date": {
       const dateArray = parseNaturalDateTime(utterance);
       if (!dateArray || dateArray.length === 0) {
@@ -145,7 +150,7 @@ export async function handleMultiTurnReserve(kakaoId, utterance, res) {
         delete sessionContext[kakaoId];
         return res.json(replySimpleText("알겠습니다. 예약을 취소했습니다."));
       } else {
-        // 의도 불명확 → QuickReplies
+        // 불분명하면 QuickReplies
         return res.json(
           replyQuickReplies("예약을 확정할까요?", ["네", "아니오"])
         );
@@ -159,8 +164,12 @@ export async function handleMultiTurnReserve(kakaoId, utterance, res) {
   }
 }
 
-// 실제 DB insert
-async function confirmReservation(memberId, timeObj, res) {
+/**
+ * 3) 실제 DB에 insert
+ *    다른 파일(예: confirmPendingTime.mjs)에서도 이 함수를 import하고 싶다면
+ *    네임드 export로 공개해야 한다.
+ */
+export async function confirmReservation(memberId, timeObj, res) {
   const reservationTime = timeObj.toISOString();
 
   // (1) 중복 예약 체크
