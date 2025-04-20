@@ -4,9 +4,11 @@ import { replyText } from "../../utils/reply.mjs";
 import { parseDateAndTime } from "../../utils/parseDateAndTime.mjs";
 import dayjs from "dayjs";
 
+// ✅ 멀티턴 상태 저장소
 export const sessionContext = {};
 
-export default async function reservePersonal(kakaoId, utterance, res) {
+// ✅ 운동 예약 진입
+export async function reservePersonal(kakaoId, utterance, res) {
   const { data: member } = await supabase
     .from("members")
     .select("id")
@@ -25,6 +27,7 @@ export default async function reservePersonal(kakaoId, utterance, res) {
 
   const { time, amOrPmRequired } = parsed;
 
+  // ✅ 오전/오후 멀티턴 분기
   if (amOrPmRequired) {
     sessionContext[kakaoId] = {
       type: "pending-am-or-pm",
@@ -37,9 +40,11 @@ export default async function reservePersonal(kakaoId, utterance, res) {
   return await confirmReservation(member.id, time, res);
 }
 
+// ✅ 운동 예약 확정
 export async function confirmReservation(memberId, time, res) {
   const reservationTime = time.toISOString();
 
+  // 중복 예약 확인
   const { data: existing } = await supabase
     .from("reservations")
     .select("id")
@@ -52,6 +57,7 @@ export async function confirmReservation(memberId, time, res) {
     return res.json(replyText("이미 해당 시간에 개인 운동을 예약하셨습니다."));
   }
 
+  // 예약 인원 확인
   const { count } = await supabase
     .from("reservations")
     .select("*", { count: "exact", head: true })
@@ -63,6 +69,7 @@ export async function confirmReservation(memberId, time, res) {
     return res.json(replyText("해당 시간은 예약이 마감되었습니다. 다른 시간을 선택해주세요."));
   }
 
+  // 예약 등록
   const { error } = await supabase
     .from("reservations")
     .insert({
@@ -78,5 +85,3 @@ export async function confirmReservation(memberId, time, res) {
 
   return res.json(replyText(`✅ ${time.format("M월 D일 HH시")} 개인 운동 예약이 완료되었습니다.`));
 }
-
-export { confirmReservation };
