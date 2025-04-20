@@ -81,6 +81,3 @@ export async function confirmReservation(memberId, time, res) {
 
   return res.json(replyText(`✅ ${time.format("M월 D일 HH시")} 개인 운동 예약이 완료되었습니다.`));
 }
-
-// ✅ export 구조 정리 포함 (Q2 대응)
-export { reservePersonal, confirmReservation };
