@@ -1,10 +1,9 @@
 // ✅ handlers/booking/reservePersonal.mjs
 import { supabase } from "../../services/supabase.mjs";
 import { replyText } from "../../utils/reply.mjs";
-import { parseNaturalDateTime } from "../../utils/parseNaturalDateTime.mjs";
+import { parseDateAndTime } from "../../utils/parseDateAndTime.mjs";
 import dayjs from "dayjs";
 
-// ✅ 세션 임시 저장소 (메모리 기반)
 export const sessionContext = {};
 
 export default async function reservePersonal(kakaoId, utterance, res) {
@@ -18,19 +17,19 @@ export default async function reservePersonal(kakaoId, utterance, res) {
     return res.json(replyText("먼저 회원 등록이 필요합니다."));
   }
 
-  const parsed = parseNaturalDateTime(utterance);
+  const parsed = parseDateAndTime(utterance);
 
   if (!parsed || !parsed.time) {
-    return res.json(replyText("예약할 날짜와 시간을 이해하지 못했어요. 예: '오늘 3시', '수요일 오전 8시'"));
+    return res.json(replyText("예약할 시간을 이해하지 못했어요. 예: '오늘 3시', '수요일 오전 8시'"));
   }
 
-  const { time, amOrPmRequired, fullDates } = parsed;
+  const { time, amOrPmRequired } = parsed;
 
-  if (amOrPmRequired && [3, 4, 5, 6, 7, 8, 9, 10, 11].includes(time.hour())) {
+  if (amOrPmRequired) {
     sessionContext[kakaoId] = {
       type: "pending-am-or-pm",
       member_id: member.id,
-      base_time: time.format(),
+      base_time: time.format() // ISO 문자열로 저장
     };
     return res.json(replyText(`${time.format("H시")}는 오전인가요, 오후인가요?`));
   }
@@ -38,11 +37,9 @@ export default async function reservePersonal(kakaoId, utterance, res) {
   return await confirmReservation(member.id, time, res);
 }
 
-// ✅ 실제 예약 확정 처리
 export async function confirmReservation(memberId, time, res) {
   const reservationTime = time.toISOString();
 
-  // 중복 확인
   const { data: existing } = await supabase
     .from("reservations")
     .select("id")
@@ -72,7 +69,7 @@ export async function confirmReservation(memberId, time, res) {
       member_id: memberId,
       type: "personal",
       reservation_time: reservationTime,
-      status: "reserved",
+      status: "reserved"
     });
 
   if (error) {
@@ -81,3 +78,5 @@ export async function confirmReservation(memberId, time, res) {
 
   return res.json(replyText(`✅ ${time.format("M월 D일 HH시")} 개인 운동 예약이 완료되었습니다.`));
 }
+
+export { confirmReservation };
