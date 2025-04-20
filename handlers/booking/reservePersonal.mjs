@@ -2,7 +2,6 @@
 import { supabase } from "../../services/supabase.mjs";
 import { replyText } from "../../utils/reply.mjs";
 import { parseDateAndTime } from "../../utils/parseDateAndTime.mjs";
-import dayjs from "dayjs";
 
 // ✅ 멀티턴 상태 저장소
 export const sessionContext = {};

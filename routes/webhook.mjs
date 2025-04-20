@@ -11,10 +11,9 @@ import * as auth from "../handlers/auth/index.mjs";
 import assignment from "../handlers/assignment/index.mjs";
 import assignRoutineToMember from "../handlers/assignment/assignRoutineToMember.mjs";
 
-import reservePersonal from "../handlers/booking/reservePersonal.mjs";
+import { reservePersonal } from "../handlers/booking/reservePersonal.mjs";
 import cancelPersonal from "../handlers/booking/cancelPersonal.mjs";
 import showSlotStatus, { confirmSlotStatus } from "../handlers/booking/showSlotStatus.mjs";
-import showMyReservations from "../handlers/booking/showMyReservations.mjs";
 import confirmPendingTime from "../handlers/booking/confirmPendingTime.mjs";
 import confirmCancelPendingTime from "../handlers/booking/confirmCancelPendingTime.mjs";
 
@@ -51,7 +50,7 @@ router.post("/", async (req, res) => {
       return res.json(replyText("확정할 요청이 없습니다. 다시 시도해주세요."));
     }
 
-    // ✅ 등록 intent
+    // ✅ 등록 intent (순서 중요!)
     if (/^전문가\s+[가-힣]{2,10}\s+01[016789][0-9]{7,8}$/.test(firstLine)) {
       return auth.auth(kakaoId, utterance, res, "registerTrainer");
     }
@@ -68,9 +67,9 @@ router.post("/", async (req, res) => {
       return auth.auth(kakaoId, utterance, res, "listMembers");
     }
 
-    // ✅ 예약 intent
+    // ✅ 예약 intent (정규식 순서 하단으로 유지)
     if (
-      /(운동|레슨|예약|PT|신청|가능)/.test(utterance) &&
+      /(운동|레슨|예약|PT)/.test(utterance) &&
       /(오늘|내일|이번주)?\s*(오전|오후)?\s*\d{1,2}\s*시/.test(utterance)
     ) {
       console.log("✅ 예약 intent 매칭됨:", utterance);
