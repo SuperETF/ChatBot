@@ -1,112 +1,86 @@
+// ✅ handlers/booking/reservePersonal.mjs
+import { supabase } from "../../services/supabase.mjs";
+import { replyText } from "../../utils/reply.mjs";
+import { parseNaturalDateTime } from "../../utils/parseNaturalDateTime.mjs";
 import dayjs from "dayjs";
-import customParseFormat from "dayjs/plugin/customParseFormat.js";
-import weekday from "dayjs/plugin/weekday.js";
-import isSameOrAfter from "dayjs/plugin/isSameOrAfter.js";
-import ko from "dayjs/locale/ko.js";
 
-dayjs.extend(customParseFormat);
-dayjs.extend(weekday);
-dayjs.extend(isSameOrAfter);
-dayjs.locale(ko);
+// ✅ 세션 임시 저장소 (메모리 기반)
+export const sessionContext = {};
 
-const WEEKDAYS = {
-  "일": 0, "월": 1, "화": 2, "수": 3, "목": 4, "금": 5, "토": 6
-};
+export default async function reservePersonal(kakaoId, utterance, res) {
+  const { data: member } = await supabase
+    .from("members")
+    .select("id")
+    .eq("kakao_id", kakaoId)
+    .maybeSingle();
 
-export function parseNaturalDateTime(utterance) {
-  const now = dayjs().second(0);
-  const baseDate = now.startOf("day");
+  if (!member) {
+    return res.json(replyText("먼저 회원 등록이 필요합니다."));
+  }
 
-  // 🗓️ 반복 요일 → fullDates용
-  if (/이번\s*주.*[월화수목금토일]/.test(utterance)) {
-    const matchedDays = utterance.match(/[월화수목금토일]/g);
-    const baseWeek = baseDate.startOf("week").add(1, "day"); // 월요일
-    const dates = matchedDays.map(day => {
-      const offset = WEEKDAYS[day] - baseWeek.day();
-      return baseWeek.add(offset >= 0 ? offset : offset + 7, "day").format("YYYY-MM-DD");
-    });
-    return {
-      fullDates: [...new Set(dates)].sort(),
+  const parsed = parseNaturalDateTime(utterance);
+
+  if (!parsed || !parsed.time) {
+    return res.json(replyText("예약할 날짜와 시간을 이해하지 못했어요. 예: '오늘 3시', '수요일 오전 8시'"));
+  }
+
+  const { time, amOrPmRequired, fullDates } = parsed;
+
+  if (amOrPmRequired && [3, 4, 5, 6, 7, 8, 9, 10, 11].includes(time.hour())) {
+    sessionContext[kakaoId] = {
+      type: "pending-am-or-pm",
+      member_id: member.id,
+      base_time: time.format(),
     };
+    return res.json(replyText(`${time.format("H시")}는 오전인가요, 오후인가요?`));
   }
 
-  // 📆 내일부터 N일간
-  const rangeMatch = utterance.match(/내일.*?(\d+)\s*일/);
-  if (rangeMatch) {
-    const count = parseInt(rangeMatch[1], 10);
-    const fullDates = Array.from({ length: count }, (_, i) =>
-      baseDate.add(i + 1, "day").format("YYYY-MM-DD")
-    );
-    return { fullDates };
-  }
-
-  // 🕒 오전/오후 + 시간 (또는 반대)
-  const ampmMatch = utterance.match(/(오전|오후)\s*(\d{1,2})시|(\d{1,2})시\s*(오전|오후)/);
-  if (ampmMatch) {
-    let hour = parseInt(ampmMatch[2] || ampmMatch[3], 10);
-    const period = ampmMatch[1] || ampmMatch[4];
-    if (period === "오후" && hour < 12) hour += 12;
-    if (period === "오전" && hour === 12) hour = 0;
-
-    const time = baseDate.hour(hour);
-    return { time, amOrPmRequired: false, fullDates: [time.format("YYYY-MM-DD")] };
-  }
-
-  // 🗓️ 오늘 3시
-  const todayMatch = utterance.match(/오늘\s*(\d{1,2})시/);
-  if (todayMatch) {
-    const hour = parseInt(todayMatch[1], 10);
-    const time = baseDate.hour(hour);
-    return {
-      time,
-      amOrPmRequired: true,
-      fullDates: [time.format("YYYY-MM-DD")]
-    };
-  }
-
-  // 🗓️ 내일 3시
-  const tomorrowMatch = utterance.match(/내일\s*(\d{1,2})시/);
-  if (tomorrowMatch) {
-    const hour = parseInt(tomorrowMatch[1], 10);
-    const time = baseDate.add(1, "day").hour(hour);
-    return {
-      time,
-      amOrPmRequired: true,
-      fullDates: [time.format("YYYY-MM-DD")]
-    };
-  }
-
-  // 📆 요일 + 시간
-  const weekdayMatch = utterance.match(/(월|화|수|목|금|토|일)(요일)?\s*(\d{1,2})시/);
-  if (weekdayMatch) {
-    const dayStr = weekdayMatch[1];
-    const hour = parseInt(weekdayMatch[3], 10);
-    const weekdayTarget = WEEKDAYS[dayStr];
-
-    let target = baseDate;
-    while (target.day() !== weekdayTarget || target.isBefore(now, "day")) {
-      target = target.add(1, "day");
-    }
-
-    const time = target.hour(hour);
-    return {
-      time,
-      amOrPmRequired: true,
-      fullDates: [time.format("YYYY-MM-DD")]
-    };
-  }
-
-  // 🕒 단순 "3시", "5시에 운동"
-  const simpleMatch = utterance.match(/(\d{1,2})\s*시/);
-  if (simpleMatch) {
-    const hour = parseInt(simpleMatch[1], 10);
-    const time = baseDate.hour(hour);
-    return {
-      time,
-      amOrPmRequired: true,
-      fullDates: [time.format("YYYY-MM-DD")]
-    };
-  }
-
-  return null;
+  return await confirmReservation(member.id, time, res);
 }
+
+// ✅ 실제 예약 확정 처리
+export async function confirmReservation(memberId, time, res) {
+  const reservationTime = time.toISOString();
+
+  // 중복 확인
+  const { data: existing } = await supabase
+    .from("reservations")
+    .select("id")
+    .eq("member_id", memberId)
+    .eq("type", "personal")
+    .eq("reservation_time", reservationTime)
+    .maybeSingle();
+
+  if (existing) {
+    return res.json(replyText("이미 해당 시간에 개인 운동을 예약하셨습니다."));
+  }
+
+  const { count } = await supabase
+    .from("reservations")
+    .select("*", { count: "exact", head: true })
+    .eq("type", "personal")
+    .eq("reservation_time", reservationTime)
+    .eq("status", "reserved");
+
+  if (count >= 4) {
+    return res.json(replyText("해당 시간은 예약이 마감되었습니다. 다른 시간을 선택해주세요."));
+  }
+
+  const { error } = await supabase
+    .from("reservations")
+    .insert({
+      member_id: memberId,
+      type: "personal",
+      reservation_time: reservationTime,
+      status: "reserved",
+    });
+
+  if (error) {
+    return res.json(replyText("예약 중 문제가 발생했습니다. 다시 시도해주세요."));
+  }
+
+  return res.json(replyText(`✅ ${time.format("M월 D일 HH시")} 개인 운동 예약이 완료되었습니다.`));
+}
+
+// ✅ export 구조 정리 포함 (Q2 대응)
+export { reservePersonal, confirmReservation };
