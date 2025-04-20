@@ -77,10 +77,12 @@ router.post("/", async (req, res) => {
     if (/몇\s*명|현황|자리\s*있어/.test(utterance) && /\d{1,2}시/.test(utterance)) {
       return showSlotStatus(kakaoId, utterance, res);
     }
-    if (/운동|예약/.test(utterance) && /\d{1,2}시/.test(utterance)) {
+    if (
+      /(운동|레슨|예약|PT|신청)/.test(utterance) &&
+      /(\d{1,2}시|오전\s*\d{1,2}시|오후\s*\d{1,2}시)/.test(utterance)
+    ) {
       return reservePersonal(kakaoId, utterance, res);
     }
-
     // ✅ 과제 관련 intent
     if (/오늘\s*과제|과제\s*있어/.test(utterance)) {
       return assignment(kakaoId, utterance, res, "getTodayAssignment");

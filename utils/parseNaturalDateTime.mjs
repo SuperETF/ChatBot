@@ -10,9 +10,7 @@ dayjs.extend(isSameOrAfter);
 dayjs.locale(ko);
 
 const WEEKDAYS = {
-  "일요일": 0, "월요일": 1, "화요일": 2, "수요일": 3,
-  "목요일": 4, "금요일": 5, "토요일": 6,
-  "일": 0, "월": 1, "화": 2, "수": 3, "목": 4, "금": 5, "토": 6,
+  "일": 0, "월": 1, "화": 2, "수": 3, "목": 4, "금": 5, "토": 6
 };
 
 /**
@@ -24,50 +22,51 @@ export function parseNaturalDateTime(utterance) {
   const now = dayjs().second(0);
   const baseDate = now.startOf("day");
 
-  // ✅ "이번 주 월수금" 같은 반복 요일 인식
+  // 이번 주 월수금
   if (/이번\s*주.*[월화수목금토일]/.test(utterance)) {
     const days = utterance.match(/[월화수목금토일]/g);
-    if (days) {
-      const baseWeek = now.startOf("week").add(1, "day"); // 월요일 기준
-      const dates = days.map(day => {
-        const weekdayNum = WEEKDAYS[day];
-        return baseWeek.day(weekdayNum).format("YYYY-MM-DD");
-      });
-      return dates;
-    }
+    const baseWeek = now.startOf("week").add(1, "day"); // 월요일
+    const dates = days.map(day => {
+      const weekdayNum = WEEKDAYS[day];
+      return baseWeek.day(weekdayNum).format("YYYY-MM-DD");
+    });
+    return [...new Set(dates)].sort();
   }
 
-  // ✅ "내일부터 N일간"
-  const match = utterance.match(/내일.*?(\d+)\s*일/);
-  if (match) {
-    const count = parseInt(match[1], 10);
+  // 내일부터 N일간
+  const rangeMatch = utterance.match(/내일.*?(\d+)\s*일/);
+  if (rangeMatch) {
+    const count = parseInt(rangeMatch[1], 10);
     return Array.from({ length: count }, (_, i) =>
       baseDate.add(i + 1, "day").format("YYYY-MM-DD")
     );
   }
 
-  // ✅ 단일 날짜 형태들 (한 날짜만 리턴)
-  const ampmMatch = utterance.match(/(오전|오후)\s*(\d{1,2})시/);
+  // 오전/오후 + 시 또는 시 + 오전/오후
+  const ampmMatch = utterance.match(/(오전|오후)\s*(\d{1,2})시|(\d{1,2})시\s*(오전|오후)/);
   if (ampmMatch) {
-    let hour = parseInt(ampmMatch[2], 10);
-    if (ampmMatch[1] === "오후" && hour < 12) hour += 12;
-    if (ampmMatch[1] === "오전" && hour === 12) hour = 0;
+    let hour = parseInt(ampmMatch[2] || ampmMatch[3], 10);
+    const period = ampmMatch[1] || ampmMatch[4];
+    if (period === "오후" && hour < 12) hour += 12;
+    if (period === "오전" && hour === 12) hour = 0;
     return [baseDate.hour(hour).format("YYYY-MM-DD")];
   }
 
+  // 오늘 3시
   const todayMatch = utterance.match(/오늘\s*(\d{1,2})시/);
   if (todayMatch) {
     const hour = parseInt(todayMatch[1], 10);
-    const target = baseDate.hour(hour);
-    return [target.isSameOrAfter(now) ? target : target.add(1, "day")].map(d => d.format("YYYY-MM-DD"));
+    return [baseDate.hour(hour).format("YYYY-MM-DD")];
   }
 
+  // 내일 3시
   const tomorrowMatch = utterance.match(/내일\s*(\d{1,2})시/);
   if (tomorrowMatch) {
     const hour = parseInt(tomorrowMatch[1], 10);
     return [baseDate.add(1, "day").hour(hour).format("YYYY-MM-DD")];
   }
 
+  // 요일 + 시
   const weekdayMatch = utterance.match(/(월|화|수|목|금|토|일)(요일)?\s*(\d{1,2})시/);
   if (weekdayMatch) {
     const weekdayName = weekdayMatch[1];
@@ -80,12 +79,13 @@ export function parseNaturalDateTime(utterance) {
     return [target.hour(hour).format("YYYY-MM-DD")];
   }
 
-  const simpleMatch = utterance.match(/(^|\s)(\d{1,2})시/);
+  // 단순 시각
+  const simpleMatch = utterance.match(/(\d{1,2})시/);
   if (simpleMatch) {
-    const hour = parseInt(simpleMatch[2], 10);
-    const target = baseDate.hour(hour);
-    return [target.isSameOrAfter(now) ? target : target.add(1, "day")].map(d => d.format("YYYY-MM-DD"));
+    const hour = parseInt(simpleMatch[1], 10);
+    return [baseDate.hour(hour).format("YYYY-MM-DD")];
   }
 
+  console.warn("📛 parseNaturalDateTime 실패:", utterance);
   return null;
 }
