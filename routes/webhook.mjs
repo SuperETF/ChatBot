@@ -10,35 +10,35 @@ import {
   cancelSession,
   assignmentSession,
   statusSession
-} from "../../utils/sessionContext.mjs";
+} from "../utils/sessionContext.mjs";
 
 // fallback
-import fallback from "../../handlers/system/fallback.mjs";
+import fallback from "../handlers/system/fallback.mjs";
 
 // 예약(booking) 관련
 import {
   reservePersonal,
   handleMultiTurnReserve as handleReserveMulti
-} from "../../handlers/booking/reservePersonal.mjs";
+} from "../handlers/booking/reservePersonal.mjs";
 
-import confirmPendingTime from "../../handlers/booking/confirmPendingTime.mjs";
-import confirmCancelPendingTime from "../../handlers/booking/confirmCancelPendingTime.mjs";
-import cancelPersonal from "../../handlers/booking/cancelPersonal.mjs";
+import confirmPendingTime from "../handlers/booking/confirmPendingTime.mjs";
+import confirmCancelPendingTime from "../handlers/booking/confirmCancelPendingTime.mjs";
+import cancelPersonal from "../handlers/booking/cancelPersonal.mjs";
 
 // 잔여 현황
 import showSlotStatus, {
   confirmSlotStatus
-} from "../../handlers/booking/showSlotStatus.mjs";
+} from "../handlers/booking/showSlotStatus.mjs";
 
 // 과제(assignment) 관련
-import assignment from "../../handlers/assignment/index.mjs";
-import assignRoutineToMember from "../../handlers/assignment/assignRoutineToMember.mjs";
+import assignment from "../handlers/assignment/index.mjs";
+import assignRoutineToMember from "../handlers/assignment/assignRoutineToMember.mjs";
 
 // 회원 등록(auth) 관련
-import * as auth from "../../handlers/auth/index.mjs";
+import * as auth from "../handlers/auth/index.mjs";
 
 // utils
-import { parseNaturalDateTime } from "../../utils/parseNaturalDateTime.mjs";
+import { parseNaturalDateTime } from "../utils/parseNaturalDateTime.mjs";
 
 
 const router = express.Router();
