@@ -25,11 +25,6 @@ import confirmPendingTime from "../handlers/booking/confirmPendingTime.mjs";
 import confirmCancelPendingTime from "../handlers/booking/confirmCancelPendingTime.mjs";
 import cancelPersonal from "../handlers/booking/cancelPersonal.mjs";
 
-// 잔여 현황
-import showSlotStatus, {
-  confirmSlotStatus
-} from "../handlers/booking/showSlotStatus.mjs";
-
 // 과제(assignment) 관련
 import assignment from "../handlers/assignment/index.mjs";
 import assignRoutineToMember from "../handlers/assignment/assignRoutineToMember.mjs";
@@ -152,12 +147,6 @@ router.post("/", async (req, res) => {
     if (REGEX.CANCEL_INTENT.test(utterance)) {
       return cancelPersonal(kakaoId, utterance, res);
     }
-
-    // 잔여 현황
-    if (REGEX.STATUS_INTENT.test(utterance)) {
-      return showSlotStatus(kakaoId, utterance, res);
-    }
-
     // 5) 과제/숙제
     if (REGEX.TODAY_ASSIGNMENT.test(utterance)) {
       return assignment(kakaoId, utterance, res, "getTodayAssignment");
