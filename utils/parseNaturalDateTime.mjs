@@ -19,10 +19,10 @@ export function parseNaturalDateTime(utterance) {
 
   // ✅ 전처리: 공백 유도 + 잡단어 제거
   utterance = utterance
-    .replace(/(오늘|내일|모레|내일모레)(\s*)(오전|오후)?(\s*)(\d{1,2})시/g, "$1 $3 $5시")
-    .replace(/(\d{1,2})시\s*(운동|레슨|예약)?/g, "$1시")
-    .replace(/\s+/g, " ")
-    .trim();
+  .replace(/(오늘|내일|모레|내일모레)\s*(오전|오후)?\s*(\d{1,2})시/g, "$1 $2 $3시")
+  .replace(/(\d{1,2})시\s*(운동|레슨|예약)?/g, "$1시")
+  .replace(/\s+/g, " ")
+  .trim();
   console.log("▶︎ after preprocessing:", utterance);
 
   // ✅ (1) 절대 날짜 인식
