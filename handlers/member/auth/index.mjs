@@ -1,5 +1,4 @@
 // handlers/auth/index.mjs 
-import registerTrainer from "./registerTrainer.mjs";
 import registerMember from "./registerMember.mjs";
 import registerTrainerMember from "./registerTrainerMember.mjs";
 import listMembers from "./listMembers.mjs";
@@ -7,9 +6,6 @@ import { replyText } from "../../../utils/reply.mjs";
 
 export const auth = async (kakaoId, utterance, res, action) => {
   switch (action) {
-    case "registerTrainer":
-      return registerTrainer(kakaoId, utterance, res);
-
     case "registerTrainerMember":
       return registerTrainerMember(kakaoId, utterance, res);
 
