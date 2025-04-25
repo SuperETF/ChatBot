@@ -20,15 +20,6 @@ router.post("/", async (req, res) => {
       return booking(kakaoId, utterance, res, "handleReserveMulti");
     }
 
-    // ✅ 예약 발화 의도 감지 (강화된 정규식)
-    const isReservationIntent =
-      /((\d{1,2})\s*시).*?(예약|운동|레슨)/.test(utterance) ||
-      /(오늘|내일|모레)\s*(오전|오후)?\s*\d{1,2}\s*시/.test(utterance) ||
-      /^\d{1,2}\s*시$/.test(utterance);
-
-    if (isReservationIntent) {
-      return booking(kakaoId, utterance, res, "reservePersonal");
-    }
 
     // ✅ 멤버 등록 흐름
     if (/^멤버\s*등록하기$/.test(utterance)) {
@@ -93,7 +84,7 @@ router.post("/", async (req, res) => {
           outputs: [
             {
               simpleText: {
-                text: "운동 시간과 함께 예약을 입력해주세요.\n예: 오늘 3시"
+                text: "운동 시간과 함께 예약을 입력해주세요.\n예: 오늘 3시 예약"
               }
             }
           ]
