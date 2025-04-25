@@ -25,14 +25,8 @@ router.post("/", async (req, res) => {
     if (/^멤버\s*등록하기$/.test(utterance)) {
       return res.json({ version: "2.0", template: { outputs: [{ simpleText: { text: "어떤 멤버를 등록하시겠어요?" } }], quickReplies: [ { label: "전문가 등록", action: "message", messageText: "전문가 등록" }, { label: "회원 등록", action: "message", messageText: "회원 등록" } ] } });
     }
-    if (/^전문가\s*등록$/.test(utterance)) {
-      return res.json({ version: "2.0", template: { outputs: [{ simpleText: { text: "전문가 등록을 위해 아래 양식으로 입력해주세요:\n예: 전문가 홍길동 01012345678 1234" } }] } });
-    }
     if (/^회원\s*등록$/.test(utterance)) {
       return res.json({ version: "2.0", template: { outputs: [{ simpleText: { text: "회원 등록을 위해 아래 양식으로 입력해주세요:\n예: 회원 홍길동 01012345678 1234" } }] } });
-    }
-    if (/^(전문가|코치|트레이너)\s+[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/.test(utterance)) {
-      return auth.auth(kakaoId, utterance, res, "registerTrainer");
     }
     if (/^(회원|멤버)\s+[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/.test(utterance)) {
       return auth.auth(kakaoId, utterance, res, "registerTrainerMember");

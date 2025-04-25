@@ -22,6 +22,9 @@ export async function reservePersonal(kakaoId, utterance, res) {
   }
 
   const dateArray = parseNaturalDateTime(utterance);
+  console.log("🧪 [reservePersonal] utterance:", utterance);
+  console.log("🧪 [reservePersonal] parsed dateArray:", dateArray);
+
   if (!dateArray || dateArray.length === 0) {
     sessionContext[kakaoId] = {
       type: "pending-date",
@@ -83,6 +86,9 @@ export async function handleMultiTurnReserve(kakaoId, utterance, res) {
   switch (session.type) {
     case "pending-date": {
       const dateArray = parseNaturalDateTime(utterance);
+      console.log("🧪 [pending-date] utterance:", utterance);
+      console.log("🧪 [pending-date] parsed:", dateArray);
+
       if (!dateArray || dateArray.length === 0) {
         return res.json(replyText("날짜/시간을 인식 못했어요. 예: '내일 오후 2시 30분'"));
       }
@@ -91,8 +97,8 @@ export async function handleMultiTurnReserve(kakaoId, utterance, res) {
       if (!timeObj.isValid() || isNaN(timeObj.hour())) {
         return res.json(replyText("시간 인식이 올바르지 않아요. 예: '5월 1일 오후 3시'"));
       }
-      const hour = timeObj.hour();
 
+      const hour = timeObj.hour();
       if (hour >= 1 && hour <= 11) {
         session.type = "pending-am-or-pm";
         session.base_time = isoString;
@@ -118,6 +124,8 @@ export async function handleMultiTurnReserve(kakaoId, utterance, res) {
 
     case "pending-am-or-pm": {
       const baseTime = dayjs(session.base_time);
+      console.log("🧪 [pending-am-or-pm] baseTime before adjust:", baseTime.toISOString());
+
       let adjustedTime = baseTime;
       if (/오전/.test(utterance)) {
         if (baseTime.hour() >= 12) adjustedTime = baseTime.subtract(12, "hour");
@@ -126,6 +134,8 @@ export async function handleMultiTurnReserve(kakaoId, utterance, res) {
       } else {
         return res.json(replyQuickReplies("오전인가요, 오후인가요?", ["오전", "오후"]));
       }
+
+      console.log("🧪 [pending-am-or-pm] adjustedTime:", adjustedTime.toISOString());
 
       session.type = "pending-confirm";
       session.base_time = adjustedTime.toISOString();
