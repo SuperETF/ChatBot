@@ -1,7 +1,7 @@
 // handlers/assignment/assignRoutineToMember.mjs
 
-import { supabase } from "../../services/supabase.mjs";
-import { replyText } from "../../utils/reply.mjs";
+import { supabase } from "../../../services/supabase.mjs";
+import { replyText } from "../../../utils/reply.mjs";
 
 export default async function assignRoutineToMember(trainerId, memberId, routineList, dateList, res) {
   const assigned = [];
