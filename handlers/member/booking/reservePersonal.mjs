@@ -1,4 +1,4 @@
-// ✅ handlers/booking/reservePersonal.mjs (최종 리팩토링)
+// ✅ handlers/booking/reservePersonal.mjs (최종 리팩토링 적용)
 import dayjs from "dayjs";
 import { supabase } from "../../../services/supabase.mjs";
 import { parseNaturalDateTime } from "../../../utils/parseNaturalDateTime.mjs";
@@ -30,20 +30,7 @@ export async function reservePersonal(kakaoId, utterance, res) {
     );
   }
 
-  // ✅ 상대 날짜 또는 오늘 키워드 우선 선택
-  const todayKeywords = ["오늘", "내일", "모레"];
-  const containsRelative = todayKeywords.some(keyword => utterance.includes(keyword));
-  const baseDate = dayjs();
-  const isoString = containsRelative
-    ? dateArray.find(d => {
-        const parsed = dayjs(d);
-        return parsed.isSame(baseDate, "day") ||
-               parsed.isSame(baseDate.add(1, "day"), "day") ||
-               parsed.isSame(baseDate.add(2, "day"), "day");
-      }) || dateArray[0]
-    : dateArray[0];
-
-  const finalTime = dayjs(isoString);
+  const finalTime = dayjs(dateArray[0]);
   if (!finalTime.isValid() || isNaN(finalTime.hour())) {
     sessionContext[kakaoId] = { type: "pending-date", member_id: member.id };
     return res.json(
@@ -55,11 +42,11 @@ export async function reservePersonal(kakaoId, utterance, res) {
   if (hour >= 1 && hour <= 11) {
     sessionContext[kakaoId] = {
       type: "pending-am-or-pm",
-      base_time: isoString,
+      base_time: finalTime.toISOString(),
       member_id: member.id
     };
     return res.json(
-      replyQuickReplies(`${finalTime.format("M월 D일 (ddd)")} ${hour}시 예약하신 건가요?\n오전인가요, 오후인가요?`, ["오전", "오후"])
+      replyQuickReplies(`${finalTime.format("M월 D일 (ddd)" )} ${hour}시 예약하신 건가요?\n오전인가요, 오후인가요?`, ["오전", "오후"])
     );
   }
 
@@ -95,8 +82,7 @@ export async function handleMultiTurnReserve(kakaoId, utterance, res) {
         return res.json(replyText("날짜/시간을 인식 못했어요. 예: '내일 오후 2시 30분'"));
       }
 
-      const isoString = dateArray[0];
-      const timeObj = dayjs(isoString);
+      const timeObj = dayjs(dateArray[0]);
       if (!timeObj.isValid() || isNaN(timeObj.hour())) {
         return res.json(replyText("시간 인식이 올바르지 않아요. 예: '5월 1일 오후 3시'"));
       }
@@ -104,14 +90,14 @@ export async function handleMultiTurnReserve(kakaoId, utterance, res) {
       const hour = timeObj.hour();
       if (hour >= 1 && hour <= 11) {
         session.type = "pending-am-or-pm";
-        session.base_time = isoString;
+        session.base_time = timeObj.toISOString();
         return res.json(
-          replyQuickReplies(`${timeObj.format("M월 D일 (ddd)")} ${hour}시, 오전인가요 오후인가요?`, ["오전", "오후"])
+          replyQuickReplies(`${timeObj.format("M월 D일 (ddd)" )} ${hour}시, 오전인가요 오후인가요?`, ["오전", "오후"])
         );
       }
 
       session.type = "pending-confirm";
-      session.base_time = isoString;
+      session.base_time = timeObj.toISOString();
 
       return res.json(
         replyBasicCard({
