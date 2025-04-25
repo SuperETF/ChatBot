@@ -10,9 +10,6 @@ import {
 
 export const sessionContext = {};
 
-/**
- * 1) 사용자 발화로 예약 진입 ("운동" 없어도 됨)
- */
 export async function reservePersonal(kakaoId, utterance, res) {
   const { data: member } = await supabase
     .from("members")
@@ -31,14 +28,23 @@ export async function reservePersonal(kakaoId, utterance, res) {
       member_id: member.id
     };
     return res.json(
-      replyQuickReplies("언제 예약하시겠어요?", ["오늘 3시", "내일 오전 10시"])
+      replyQuickReplies("운동 시간을 입력해주세요. 예: 오늘 3시", ["오늘 3시", "내일 오전 10시"])
     );
   }
 
   const isoString = dateArray[0];
   const finalTime = dayjs(isoString);
-  const hour = finalTime.hour();
+  if (!finalTime.isValid() || isNaN(finalTime.hour())) {
+    sessionContext[kakaoId] = {
+      type: "pending-date",
+      member_id: member.id
+    };
+    return res.json(
+      replyQuickReplies("시간을 정확히 입력해주세요. 예: 내일 오후 2시", ["오늘 3시", "내일 오전 10시"])
+    );
+  }
 
+  const hour = finalTime.hour();
   if (hour >= 1 && hour <= 11) {
     sessionContext[kakaoId] = {
       type: "pending-am-or-pm",
@@ -46,7 +52,7 @@ export async function reservePersonal(kakaoId, utterance, res) {
       member_id: member.id
     };
     return res.json(
-      replyQuickReplies(`${finalTime.format("M월 D일 (ddd)")} ${hour}시 예약하신 건가요?\n오전인가요, 오후인가요?`, ["오전", "오후"])
+      replyQuickReplies(`${finalTime.format("M월 D일 (ddd)" )} ${hour}시 예약하신 건가요?\n오전인가요, 오후인가요?`, ["오전", "오후"])
     );
   }
 
@@ -68,9 +74,6 @@ export async function reservePersonal(kakaoId, utterance, res) {
   );
 }
 
-/**
- * 2) 멀티턴 처리
- */
 export async function handleMultiTurnReserve(kakaoId, utterance, res) {
   const session = sessionContext[kakaoId];
   if (!session) {
@@ -85,12 +88,17 @@ export async function handleMultiTurnReserve(kakaoId, utterance, res) {
       }
       const isoString = dateArray[0];
       const timeObj = dayjs(isoString);
+      if (!timeObj.isValid() || isNaN(timeObj.hour())) {
+        return res.json(replyText("시간 인식이 올바르지 않아요. 예: '5월 1일 오후 3시'"));
+      }
       const hour = timeObj.hour();
 
       if (hour >= 1 && hour <= 11) {
         session.type = "pending-am-or-pm";
         session.base_time = isoString;
-        return res.json(replyQuickReplies(`${timeObj.format("M월 D일 (ddd)")} ${hour}시, 오전인가요 오후인가요?`, ["오전", "오후"]));
+        return res.json(
+          replyQuickReplies(`${timeObj.format("M월 D일 (ddd)" )} ${hour}시, 오전인가요 오후인가요?`, ["오전", "오후"])
+        );
       }
 
       session.type = "pending-confirm";
@@ -112,13 +120,9 @@ export async function handleMultiTurnReserve(kakaoId, utterance, res) {
       const baseTime = dayjs(session.base_time);
       let adjustedTime = baseTime;
       if (/오전/.test(utterance)) {
-        if (baseTime.hour() >= 12) {
-          adjustedTime = baseTime.subtract(12, "hour");
-        }
+        if (baseTime.hour() >= 12) adjustedTime = baseTime.subtract(12, "hour");
       } else if (/오후/.test(utterance)) {
-        if (baseTime.hour() < 12) {
-          adjustedTime = baseTime.add(12, "hour");
-        }
+        if (baseTime.hour() < 12) adjustedTime = baseTime.add(12, "hour");
       } else {
         return res.json(replyQuickReplies("오전인가요, 오후인가요?", ["오전", "오후"]));
       }
@@ -147,11 +151,14 @@ export async function handleMultiTurnReserve(kakaoId, utterance, res) {
         return confirmReservation(memberId, finalTime, res);
       } else if (/(아니오|노|취소|ㄴㄴ)/.test(lower)) {
         delete sessionContext[kakaoId];
-        return res.json(replyQuickReplies("알겠습니다. 예약을 취소했습니다. 다시 예약하시겠어요?", ["오늘 3시", "내일 오전 10시"]));
-      } else {
         return res.json(
-          replyQuickReplies("예약을 확정할까요?", ["네", "아니오"])
+          replyQuickReplies("알겠습니다. 예약을 취소했습니다. 다시 예약하시겠어요?", [
+            "오늘 3시",
+            "내일 오전 10시"
+          ])
         );
+      } else {
+        return res.json(replyQuickReplies("예약을 확정할까요?", ["네", "아니오"]));
       }
     }
 
@@ -161,9 +168,6 @@ export async function handleMultiTurnReserve(kakaoId, utterance, res) {
   }
 }
 
-/**
- * 3) 최종 DB insert
- */
 export async function confirmReservation(memberId, timeObj, res) {
   const reservationTime = timeObj.toISOString();
 
