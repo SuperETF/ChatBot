@@ -33,11 +33,14 @@ router.post("/", async (req, res) => {
     }
 
     // ✅ 예약 흐름
-    if (/^개인\s*운동\s*예약$/.test(utterance)) {
-      return res.json({ version: "2.0", template: { outputs: [{ simpleText: { text: "예약 유형을 선택해주세요." } }], quickReplies: [ { label: "개인 운동", action: "message", messageText: "개인 운동" }, { label: "1:1 레슨", action: "message", messageText: "1:1 레슨" } ] } });
+    if (
+      /((\d{1,2}\s*시).*?(운동|레슨|예약))|((운동|레슨|예약).*?(\d{1,2}\s*시))/.test(utterance) ||
+      /(오늘|내일|모레)?\s*(오전|오후)?\s*\d{1,2}\s*시/.test(utterance)
+    ) {
+      return booking(kakaoId, utterance, res, "reservePersonal");
     }
     if (/^개인\s*운동$/.test(utterance)) {
-      return res.json({ version: "2.0", template: { outputs: [{ simpleText: { text: "운동 시간과 함께 예약을 입력해주세요.\n예: 3시 예약" } }] } });
+      return booking(kakaoId, utterance, res, "reservePersonal");
     }
     if (/^1:1\s*레슨$/.test(utterance)) {
       return res.json({ version: "2.0", template: { outputs: [{ simpleText: { text: "레슨 시간과 함께 예약을 입력해주세요.\n예: 5시 레슨" } }] } });
