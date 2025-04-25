@@ -1,5 +1,4 @@
 import registerMember from "./registerMember.mjs";
-import listMembers from "./listMembers.mjs";
 import { replyText } from "../../../utils/reply.mjs";
 
 export const auth = async (kakaoId, utterance, res, action) => {

@@ -1,5 +1,3 @@
-import showMyReservations from "./showMyReservations.mjs";
-import cancelPersonal from "./cancelPersonal.mjs";
 import { replyText } from "../../../utils/reply.mjs";
 
 export default async function booking(kakaoId, utterance, res, action) {
