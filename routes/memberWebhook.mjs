@@ -3,7 +3,6 @@ import express from "express";
 import { supabase } from "../services/supabase.mjs";
 import assignment from "../handlers/member/assignment/index.mjs";
 import * as auth from "../handlers/member/auth/index.mjs";
-// ✅ booking/index.mjs 에서 reservePersonal, handleMultiTurnReserve, sessionContext 모두 re-export
 import booking, { sessionContext } from "../handlers/member/booking/index.mjs";
 
 const router = express.Router();
@@ -15,21 +14,20 @@ router.post("/", async (req, res) => {
   console.log("🟡 발화 입력:", utterance);
 
   try {
-    // — 이미 멀티턴 예약 흐름 중이면 handleMultiTurnReserve 호출
+    // — 이미 멀티턴 예약 흐름 중이면 멀티턴 핸들러
     if (sessionContext[kakaoId]?.type) {
       return booking(kakaoId, utterance, res, "handleReserveMulti");
     }
 
-    // — 멤버 등록 흐름
+    // — 멤버 등록 흐름 (전문가 등록 옵션 제거)
     if (/^멤버\s*등록하기$/.test(utterance)) {
       return res.json({
         version: "2.0",
         template: {
           outputs: [
-            { simpleText: { text: "어떤 멤버를 등록하시겠어요?" } }
+            { simpleText: { text: "회원 등록을 선택하셨군요. 계속 진행합니다." } }
           ],
           quickReplies: [
-            { label: "전문가 등록", action: "message", messageText: "전문가 등록" },
             { label: "회원 등록", action: "message", messageText: "회원 등록" }
           ]
         }
@@ -53,7 +51,7 @@ router.post("/", async (req, res) => {
       return auth.auth(kakaoId, utterance, res, "registerTrainerMember");
     }
 
-    // — 예약 선택 안내
+    // — 예약 유형 선택 안내
     if (/^개인\s*운동\s*예약$/.test(utterance)) {
       return res.json({
         version: "2.0",
@@ -66,33 +64,10 @@ router.post("/", async (req, res) => {
         }
       });
     }
-    if (/^개인\s*운동$/.test(utterance)) {
-      return res.json({
-        version: "2.0",
-        template: {
-          outputs: [
-            {
-              simpleText: {
-                text: "운동 시간과 함께 예약을 입력해주세요.\n예: 오늘 3시 예약"
-              }
-            }
-          ]
-        }
-      });
-    }
-    if (/^1:1\s*레슨$/.test(utterance)) {
-      return res.json({
-        version: "2.0",
-        template: {
-          outputs: [
-            {
-              simpleText: {
-                text: "레슨 시간과 함께 예약을 입력해주세요.\n예: 내일 오전 10시"
-              }
-            }
-          ]
-        }
-      });
+
+    // — 예약 플로우 진입: 개인 운동 / 1:1 레슨
+    if (/^(개인\s*운동|1:1\s*레슨)(?:\s*예약)?$/.test(utterance)) {
+      return booking(kakaoId, utterance, res, "reservePersonal");
     }
 
     // — 과제 확인 흐름
@@ -127,7 +102,7 @@ router.post("/", async (req, res) => {
           }
         ],
         quickReplies: [
-          { label: "멤버 등록하기", action: "message", messageText: "멤버 등록하기" },
+          { label: "회원 등록하기", action: "message", messageText: "회원 등록하기" },
           { label: "개인 운동 예약", action: "message", messageText: "개인 운동 예약" },
           { label: "과제 확인하기", action: "message", messageText: "과제 확인하기" }
         ]
