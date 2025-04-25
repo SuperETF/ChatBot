@@ -1,9 +1,9 @@
-// handlers/auth/index.mjs (단순화 분기 버전)
+// handlers/auth/index.mjs 
 import registerTrainer from "./registerTrainer.mjs";
 import registerMember from "./registerMember.mjs";
 import registerTrainerMember from "./registerTrainerMember.mjs";
 import listMembers from "./listMembers.mjs";
-import { replyText } from "../../utils/reply.mjs";
+import { replyText } from "../../../utils/reply.mjs";
 
 export const auth = async (kakaoId, utterance, res, action) => {
   switch (action) {

@@ -6,9 +6,9 @@ import getUpcomingAssignments from "./getUpcomingAssignments.mjs";
 import startAssignment from "./startAssignment.mjs";
 import finishAssignment from "./finishAssignment.mjs";
 
-import { assignmentSession } from "../../utils/sessionContext.mjs";
-import { replyText, replyQuickReplies } from "../../utils/reply.mjs";
-import { supabase } from "../../services/supabase.mjs";
+import { assignmentSession } from "../../../utils/sessionContext.mjs";
+import { replyText, replyQuickReplies } from "../../../utils/reply.mjs";
+import { supabase } from "../../../services/supabase.mjs";
 
 /**
  * 과제 관련 액션 dispatcher

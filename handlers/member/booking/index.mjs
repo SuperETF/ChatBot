@@ -3,7 +3,7 @@ import { reservePersonal, handleMultiTurnReserve, confirmReservation } from "./r
 import cancelPersonal from "./cancelPersonal.mjs";
 import confirmPendingTime from "./confirmPendingTime.mjs";
 import showMyReservations from "./showMyReservations.mjs";
-import { replyText } from "../../utils/reply.mjs";
+import { replyText } from "../../../utils/reply.mjs";
 
 export default async function booking(kakaoId, utterance, res, action) {
   switch (action) {
