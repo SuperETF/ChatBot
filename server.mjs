@@ -22,7 +22,7 @@ import express from "express";
 import cors from "cors";
 
 // ✅ 회원용 & 관리자용 웹훅 라우터
-import memberWebhook from "./routes/webhook.mjs";
+import memberWebhook from "./routes/memberWebhook.mjs";
 import adminWebhook from "./routes/adminWebhook.mjs";
 
 const app = express();
