@@ -4,7 +4,11 @@ import express from "express";
 import { supabase } from "../services/supabase.mjs";
 import assignment from "../handlers/assignment/index.mjs";
 import * as auth from "../handlers/auth/index.mjs";
-import { reservePersonal } from "../handlers/booking/reservePersonal.mjs";
+import {
+  reservePersonal,
+  handleMultiTurnReserve,
+  sessionContext
+} from "../handlers/booking/reservePersonal.mjs";
 
 const router = express.Router();
 
@@ -15,7 +19,12 @@ router.post("/", async (req, res) => {
   console.log("🟡 발화 입력:", utterance);
 
   try {
-    // 버튼 기반 intent 처리
+    // ✅ 멀티턴 예약 흐름 처리 ("네"/"아니오" 등)
+    if (sessionContext[kakaoId]) {
+      return handleMultiTurnReserve(kakaoId, utterance, res);
+    }
+
+    // ✅ 버튼 기반 intent 처리
     if (/^멤버\s*등록하기$/.test(utterance)) {
       return res.json({ version: "2.0", template: { outputs: [{ simpleText: { text: "어떤 멤버를 등록하시겠어요?" } }], quickReplies: [ { label: "전문가 등록", action: "message", messageText: "전문가 등록" }, { label: "회원 등록", action: "message", messageText: "회원 등록" } ] } });
     }
