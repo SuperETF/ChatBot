@@ -14,7 +14,7 @@ export function parseNaturalDateTime(utterance) {
   const now = dayjs().second(0);
   const results = [];
 
-  // ✅ (1) "4월 29일 3시", "5월 1일 오후 2시"
+  // ✅ (1) 절대 날짜 우선 처리
   const fullDateRegex = /(\d{1,2})월\s*(\d{1,2})일\s*(오전|오후)?\s*(\d{1,2})시(?:\s*(\d{1,2})분)?/g;
   const fullMatches = [...utterance.matchAll(fullDateRegex)];
 
@@ -26,7 +26,6 @@ export function parseNaturalDateTime(utterance) {
     if (ampm === "오후" && hour < 12) hour += 12;
     if (ampm === "오전" && hour === 12) hour = 0;
 
-    // 💡 년도는 자동 추정: 지금보다 이전이면 다음 해로 보정
     let date = dayjs().set("month", parseInt(month) - 1).set("date", parseInt(day));
     if (date.isBefore(now, "day")) date = date.add(1, "year");
 
@@ -34,13 +33,13 @@ export function parseNaturalDateTime(utterance) {
     if (parsed.isValid()) results.push(parsed.toISOString());
   }
 
-  // ✅ (2) 기존: 오늘/내일/모레 + 시
+  // ✅ (2) 상대 날짜 처리: 오늘/내일/모레 (중복 방지 포함)
   const relativeRegex = new RegExp(
-    `(오늘|내일|모레)?\s*` +
+    `(?<!\d)(오늘|내일|모레)\s*` +
     `(오전|오후)?\s*` +
     `(?:(\d{1,2})시\s*(\d{1,2})?\s*분?|` +
     `(\d{1,2}):(\d{1,2})|` +
-    `(\d{1,2})시)`, "gi"
+    `(\d{1,2})시)(?!\d)`, "gi"
   );
 
   const relMatches = [...utterance.matchAll(relativeRegex)];
@@ -68,7 +67,7 @@ export function parseNaturalDateTime(utterance) {
     if (dayKeyword === "모레") base = base.add(2, "day");
 
     const final = base.hour(hour).minute(minute).second(0);
-    results.push(final.toISOString());
+    if (final.isValid()) results.push(final.toISOString());
   }
 
   return results
