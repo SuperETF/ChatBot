@@ -11,7 +11,7 @@ import {
 export const sessionContext = {};
 
 /**
- * 1) 사용자 발화로 "운동 예약" 진입
+ * 1) 사용자 발화로 예약 진입 ("운동" 없어도 됨)
  */
 export async function reservePersonal(kakaoId, utterance, res) {
   const { data: member } = await supabase
@@ -31,7 +31,7 @@ export async function reservePersonal(kakaoId, utterance, res) {
       member_id: member.id
     };
     return res.json(
-      replyQuickReplies("언제 운동을 예약하시겠어요?", ["오늘 3시", "내일 오전 10시"])
+      replyQuickReplies("언제 예약하시겠어요?", ["오늘 3시", "내일 오전 10시"])
     );
   }
 
@@ -39,7 +39,6 @@ export async function reservePersonal(kakaoId, utterance, res) {
   const finalTime = dayjs(isoString);
   const hour = finalTime.hour();
 
-  // ⚠️ 시간대가 1~11시이면 오전/오후 구분 요청
   if (hour >= 1 && hour <= 11) {
     sessionContext[kakaoId] = {
       type: "pending-am-or-pm",
@@ -47,8 +46,7 @@ export async function reservePersonal(kakaoId, utterance, res) {
       member_id: member.id
     };
     return res.json(
-      replyQuickReplies(`${hour}시에 운동 예약하신 건가요?
-오전인가요, 오후인가요?`, ["오전", "오후"])
+      replyQuickReplies(`${finalTime.format("M월 D일 (ddd)")} ${hour}시 예약하신 건가요?\n오전인가요, 오후인가요?`, ["오전", "오후"])
     );
   }
 
@@ -92,7 +90,7 @@ export async function handleMultiTurnReserve(kakaoId, utterance, res) {
       if (hour >= 1 && hour <= 11) {
         session.type = "pending-am-or-pm";
         session.base_time = isoString;
-        return res.json(replyQuickReplies(`${hour}시, 오전인가요 오후인가요?`, ["오전", "오후"]));
+        return res.json(replyQuickReplies(`${timeObj.format("M월 D일 (ddd)")} ${hour}시, 오전인가요 오후인가요?`, ["오전", "오후"]));
       }
 
       session.type = "pending-confirm";
