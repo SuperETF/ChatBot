@@ -6,7 +6,7 @@ import {
   replyText,
   replyQuickReplies,
   replyBasicCard
-} from "../../utils/reply.mjs";
+} from "../../../utils/reply.mjs";
 
 export const sessionContext = {};
 
