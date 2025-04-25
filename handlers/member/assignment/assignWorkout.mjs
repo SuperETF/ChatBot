@@ -1,6 +1,5 @@
 import { supabase } from "../../../services/supabase.mjs";
 import { replyText } from "../../../utils/reply.mjs";
-import { parseDateWithFallback } from "../../../utils/parseDateWithFallback.mjs";
 
 export default async function assignWorkout(kakaoId, utterance, res) {
   // ✅ 트레이너 인증
