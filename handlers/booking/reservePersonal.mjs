@@ -14,7 +14,6 @@ export const sessionContext = {};
  * 1) 사용자 발화로 "운동 예약" 진입
  */
 export async function reservePersonal(kakaoId, utterance, res) {
-  // 회원 여부
   const { data: member } = await supabase
     .from("members")
     .select("id")
@@ -25,7 +24,6 @@ export async function reservePersonal(kakaoId, utterance, res) {
     return res.json(replyText("먼저 회원 등록이 필요합니다."));
   }
 
-  // 날짜/시간 파싱
   const dateArray = parseNaturalDateTime(utterance);
   if (!dateArray || dateArray.length === 0) {
     sessionContext[kakaoId] = {
@@ -39,6 +37,19 @@ export async function reservePersonal(kakaoId, utterance, res) {
 
   const isoString = dateArray[0];
   const finalTime = dayjs(isoString);
+
+  // 시간만 있고 오전/오후 구분이 불확실할 때 (오전 0~6시, 오후 13~18시 제외)
+  const hour = finalTime.hour();
+  if (hour >= 7 && hour <= 11) {
+    sessionContext[kakaoId] = {
+      type: "pending-am-or-pm",
+      base_time: isoString,
+      member_id: member.id
+    };
+    return res.json(
+      replyQuickReplies(`${hour}시에 오전인가요, 오후인가요?`, ["오전", "오후"])
+    );
+  }
 
   sessionContext[kakaoId] = {
     type: "pending-confirm",
@@ -74,14 +85,53 @@ export async function handleMultiTurnReserve(kakaoId, utterance, res) {
         return res.json(replyText("날짜/시간을 인식 못했어요. 예: '내일 오후 2시 30분'"));
       }
       const isoString = dateArray[0];
+      const timeObj = dayjs(isoString);
+      const hour = timeObj.hour();
+
+      // 오전/오후 분기
+      if (hour >= 7 && hour <= 11) {
+        session.type = "pending-am-or-pm";
+        session.base_time = isoString;
+        return res.json(replyQuickReplies(`${hour}시에 오전인가요, 오후인가요?`, ["오전", "오후"]));
+      }
+
       session.type = "pending-confirm";
       session.base_time = isoString;
 
-      const timeObj = dayjs(isoString);
       return res.json(
         replyBasicCard({
           title: "운동 예약 확인",
           description: `${timeObj.format("M월 D일 (ddd) HH시")}에 예약하시겠습니까?`,
+          buttons: [
+            { label: "네" },
+            { label: "아니오" }
+          ]
+        })
+      );
+    }
+
+    case "pending-am-or-pm": {
+      const baseTime = dayjs(session.base_time);
+      let adjustedTime = baseTime;
+      if (/오전/.test(utterance)) {
+        if (baseTime.hour() >= 12) {
+          adjustedTime = baseTime.subtract(12, "hour");
+        }
+      } else if (/오후/.test(utterance)) {
+        if (baseTime.hour() < 12) {
+          adjustedTime = baseTime.add(12, "hour");
+        }
+      } else {
+        return res.json(replyQuickReplies("오전인가요, 오후인가요?", ["오전", "오후"]));
+      }
+
+      session.type = "pending-confirm";
+      session.base_time = adjustedTime.toISOString();
+
+      return res.json(
+        replyBasicCard({
+          title: "운동 예약 확인",
+          description: `${adjustedTime.format("M월 D일 (ddd) HH시")}에 예약하시겠습니까?`,
           buttons: [
             { label: "네" },
             { label: "아니오" }
@@ -99,7 +149,7 @@ export async function handleMultiTurnReserve(kakaoId, utterance, res) {
         return confirmReservation(memberId, finalTime, res);
       } else if (/(아니오|노|취소|ㄴㄴ)/.test(lower)) {
         delete sessionContext[kakaoId];
-        return res.json(replyText("알겠습니다. 예약을 취소했습니다."));
+        return res.json(replyQuickReplies("알겠습니다. 예약을 취소했습니다. 다시 예약하시겠어요?", ["오늘 3시", "내일 오전 10시"]));
       } else {
         return res.json(
           replyQuickReplies("예약을 확정할까요?", ["네", "아니오"])
@@ -119,7 +169,6 @@ export async function handleMultiTurnReserve(kakaoId, utterance, res) {
 export async function confirmReservation(memberId, timeObj, res) {
   const reservationTime = timeObj.toISOString();
 
-  // 중복 체크
   const { data: existing } = await supabase
     .from("reservations")
     .select("id")
@@ -131,7 +180,6 @@ export async function confirmReservation(memberId, timeObj, res) {
     return res.json(replyText("이미 해당 시간에 운동 예약이 되어 있습니다."));
   }
 
-  // 인원 제한
   const { count } = await supabase
     .from("reservations")
     .select("*", { count: "exact", head: true })
@@ -142,7 +190,6 @@ export async function confirmReservation(memberId, timeObj, res) {
     return res.json(replyText("해당 시간은 이미 마감되었습니다. 다른 시간을 선택해주세요."));
   }
 
-  // DB insert
   const { error } = await supabase
     .from("reservations")
     .insert({
