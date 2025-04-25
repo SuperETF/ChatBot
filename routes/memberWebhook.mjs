@@ -51,17 +51,10 @@ router.post("/", async (req, res) => {
         }
       });
     }
-// ✅ 개인 운동 예약 진입
-if (/^개인\s*운동$/.test(utterance)) {
-  return booking(kakaoId, utterance, res, "reservePersonal");
-}
-
-    // — 예약 플로우 진입: “개인 운동 예약” 또는 “1:1 레슨 예약”
-    if (/^(개인\s*운동|1:1\s*레슨)\s*예약$/.test(utterance)) {
+    if (/^(개인\s*운동|1:1\s*레슨)$/.test(utterance)) {
       return booking(kakaoId, utterance, res, "reservePersonal");
     }
     
-
     // — 과제 확인 흐름
     if (/^과제\s*확인하기$/.test(utterance)) {
       return res.json({
