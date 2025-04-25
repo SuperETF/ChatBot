@@ -1,4 +1,3 @@
-// ✅ utils/parseNaturalDateTime.mjs (최종 버전: 오늘/내일/모레 완전 대응)
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat.js";
 import weekday from "dayjs/plugin/weekday.js";
@@ -13,6 +12,13 @@ dayjs.locale(ko);
 export function parseNaturalDateTime(utterance) {
   const now = dayjs().second(0);
   const results = [];
+
+  // ✅ 전처리: 붙은 표현 분리 + 불필요한 키워드 제거
+  utterance = utterance
+    .replace(/(오늘|내일|모레)(오전|오후)?(\d{1,2})시/g, "$1 $2 $3시")
+    .replace(/(\d{1,2})시\s*(운동|레슨|예약)?/g, "$1시")
+    .replace(/\s+/g, " ")
+    .trim();
 
   // ✅ (1) 절대 날짜 우선 처리
   const fullDateRegex = /(?:([0-9]{4})년\s*)?(\d{1,2})월\s*(\d{1,2})일\s*(오전|오후)?\s*(\d{1,2})시(?:\s*(\d{1,2})분)?/g;
@@ -35,7 +41,7 @@ export function parseNaturalDateTime(utterance) {
   }
 
   // ✅ (2) 상대 날짜: 오늘/내일/모레
-  const relativeRegex = /\b(오늘|내일|모레)\s*(오전|오후)?\s*(\d{1,2})시(?:\s*(\d{1,2})분)?/gi;
+  const relativeRegex = /(오늘|내일|모레)\s*(오전|오후)?\s*(\d{1,2})시(?:\s*(\d{1,2})분)?/gi;
   const matches = [...utterance.matchAll(relativeRegex)];
 
   for (const match of matches) {
@@ -55,7 +61,7 @@ export function parseNaturalDateTime(utterance) {
   }
 
   // ✅ (3) 오늘 키워드 생략된 시간 단독 표현도 허용
-  const timeOnlyRegex = /\b(오전|오후)?\s*(\d{1,2})시(?:\s*(\d{1,2})분)?/gi;
+  const timeOnlyRegex = /(오전|오후)?\s*(\d{1,2})시(?:\s*(\d{1,2})분)?/gi;
   const timeOnlyMatches = [...utterance.matchAll(timeOnlyRegex)];
 
   for (const match of timeOnlyMatches) {
