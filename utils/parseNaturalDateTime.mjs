@@ -1,4 +1,4 @@
-// ✅ utils/parseNaturalDateTime.mjs
+// ✅ utils/parseNaturalDateTime.mjs (최종 버전: 오늘/내일/모레 완전 대응)
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat.js";
 import weekday from "dayjs/plugin/weekday.js";
@@ -34,41 +34,40 @@ export function parseNaturalDateTime(utterance) {
     if (parsed.isValid()) results.push(parsed.toISOString());
   }
 
-  // ✅ (2) 상대 날짜 처리: 오늘/내일/모레 (중복 방지 포함)
-  const relativeRegex = new RegExp(
-    `(?<!\d)(오늘|내일|모레)?\s*` +
-    `(오전|오후)?\s*` +
-    `(?:(\d{1,2})시\s*(\d{1,2})?\s*분?|` +
-    `(\d{1,2}):(\d{1,2})|` +
-    `(\d{1,2})시)(?!\d)`, "gi"
-  );
+  // ✅ (2) 상대 날짜: 오늘/내일/모레
+  const relativeRegex = /\b(오늘|내일|모레)\s*(오전|오후)?\s*(\d{1,2})시(?:\s*(\d{1,2})분)?/gi;
+  const matches = [...utterance.matchAll(relativeRegex)];
 
-  const relMatches = [...utterance.matchAll(relativeRegex)];
-
-  for (const match of relMatches) {
-    const dayKeyword = match[1];
-    const ampm = match[2];
-    let hour, minute = 0;
-
-    if (match[3]) {
-      hour = parseInt(match[3], 10);
-      if (match[4]) minute = parseInt(match[4], 10);
-    } else if (match[5]) {
-      hour = parseInt(match[5], 10);
-      minute = parseInt(match[6], 10);
-    } else if (match[7]) {
-      hour = parseInt(match[7], 10);
-    }
+  for (const match of matches) {
+    const [, keyword, ampm, hourRaw, minuteRaw] = match;
+    let hour = parseInt(hourRaw, 10);
+    const minute = parseInt(minuteRaw || "0", 10);
 
     if (ampm === "오후" && hour < 12) hour += 12;
     if (ampm === "오전" && hour === 12) hour = 0;
 
     let base = now.clone();
-    if (dayKeyword === "내일") base = base.add(1, "day");
-    if (dayKeyword === "모레") base = base.add(2, "day");
+    if (keyword === "내일") base = base.add(1, "day");
+    if (keyword === "모레") base = base.add(2, "day");
 
-    const final = base.hour(hour).minute(minute).second(0);
-    if (final.isValid()) results.push(final.toISOString());
+    const parsed = base.hour(hour).minute(minute).second(0);
+    if (parsed.isValid()) results.push(parsed.toISOString());
+  }
+
+  // ✅ (3) 오늘 키워드 생략된 시간 단독 표현도 허용
+  const timeOnlyRegex = /\b(오전|오후)?\s*(\d{1,2})시(?:\s*(\d{1,2})분)?/gi;
+  const timeOnlyMatches = [...utterance.matchAll(timeOnlyRegex)];
+
+  for (const match of timeOnlyMatches) {
+    const [, ampm, hourRaw, minuteRaw] = match;
+    let hour = parseInt(hourRaw, 10);
+    const minute = parseInt(minuteRaw || "0", 10);
+
+    if (ampm === "오후" && hour < 12) hour += 12;
+    if (ampm === "오전" && hour === 12) hour = 0;
+
+    const parsed = now.clone().hour(hour).minute(minute).second(0);
+    if (parsed.isValid()) results.push(parsed.toISOString());
   }
 
   return results

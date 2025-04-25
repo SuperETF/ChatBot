@@ -26,7 +26,7 @@ export async function reservePersonal(kakaoId, utterance, res) {
   if (!dateArray || dateArray.length === 0) {
     sessionContext[kakaoId] = { type: "pending-date", member_id: member.id };
     return res.json(
-      replyQuickReplies("운동 시간을 입력해주세요. 예: 오늘 3시", ["오늘 3시", "내일 오전 10시"])
+      replyQuickReplies("운동 시간을 입력해주세요. 예: 오늘 3시 운동", ["오늘 3시", "내일 오전 10시"])
     );
   }
 
