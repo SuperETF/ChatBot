@@ -20,7 +20,10 @@ if (!fs.existsSync(envPath)) {
 // ✅ 서버 실행
 import express from "express";
 import cors from "cors";
-import webhookRouter from "./routes/webhook.mjs";
+
+// ✅ 회원용 & 관리자용 웹훅 라우터
+import memberWebhook from "./routes/webhook.mjs";
+import adminWebhook from "./routes/adminWebhook.mjs";
 
 const app = express();
 
@@ -28,8 +31,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ 라우터
-app.use("/kakao/webhook", webhookRouter);
+// ✅ 라우터 연결
+app.use("/kakao/webhook", memberWebhook);   // 회원용 챗봇
+app.use("/kakao/admin", adminWebhook);      // 관리자용 챗봇
 
 // ✅ 기본 404 응답
 app.use((req, res) => {
