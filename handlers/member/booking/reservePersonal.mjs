@@ -1,4 +1,4 @@
-// ✅ handlers/booking/reservePersonal.mjs
+// ✅ handlers/booking/reservePersonal.mjs (최종 리팩토링)
 import dayjs from "dayjs";
 import { supabase } from "../../../services/supabase.mjs";
 import { parseNaturalDateTime } from "../../../utils/parseNaturalDateTime.mjs";
@@ -17,31 +17,29 @@ export async function reservePersonal(kakaoId, utterance, res) {
     .eq("kakao_id", kakaoId)
     .maybeSingle();
 
-  if (!member) {
-    return res.json(replyText("먼저 회원 등록이 필요합니다."));
-  }
+  if (!member) return res.json(replyText("먼저 회원 등록이 필요합니다."));
 
   const dateArray = parseNaturalDateTime(utterance);
   console.log("🧪 [reservePersonal] utterance:", utterance);
   console.log("🧪 [reservePersonal] parsed dateArray:", dateArray);
 
   if (!dateArray || dateArray.length === 0) {
-    sessionContext[kakaoId] = {
-      type: "pending-date",
-      member_id: member.id
-    };
+    sessionContext[kakaoId] = { type: "pending-date", member_id: member.id };
     return res.json(
       replyQuickReplies("운동 시간을 입력해주세요. 예: 오늘 3시", ["오늘 3시", "내일 오전 10시"])
     );
   }
 
-  const isoString = dateArray[0];
+  // ✅ 상대 날짜 또는 오늘 키워드 우선 선택
+  const todayKeywords = ["오늘", "내일", "모레"];
+  const containsRelative = todayKeywords.some(keyword => utterance.includes(keyword));
+  const isoString = containsRelative
+    ? dateArray.find(d => d.includes(dayjs().format("YYYY-MM-DD").slice(0, 8))) || dateArray[0]
+    : dateArray[0];
+
   const finalTime = dayjs(isoString);
   if (!finalTime.isValid() || isNaN(finalTime.hour())) {
-    sessionContext[kakaoId] = {
-      type: "pending-date",
-      member_id: member.id
-    };
+    sessionContext[kakaoId] = { type: "pending-date", member_id: member.id };
     return res.json(
       replyQuickReplies("시간을 정확히 입력해주세요. 예: 내일 오후 2시", ["오늘 3시", "내일 오전 10시"])
     );
@@ -55,7 +53,7 @@ export async function reservePersonal(kakaoId, utterance, res) {
       member_id: member.id
     };
     return res.json(
-      replyQuickReplies(`${finalTime.format("M월 D일 (ddd)" )} ${hour}시 예약하신 건가요?\n오전인가요, 오후인가요?`, ["오전", "오후"])
+      replyQuickReplies(`${finalTime.format("M월 D일 (ddd)")} ${hour}시 예약하신 건가요?\n오전인가요, 오후인가요?`, ["오전", "오후"])
     );
   }
 
@@ -79,9 +77,7 @@ export async function reservePersonal(kakaoId, utterance, res) {
 
 export async function handleMultiTurnReserve(kakaoId, utterance, res) {
   const session = sessionContext[kakaoId];
-  if (!session) {
-    return res.json(replyText("새로운 예약을 원하시면 '예약'이라고 말씀해주세요."));
-  }
+  if (!session) return res.json(replyText("새로운 예약을 원하시면 '예약'이라고 말씀해주세요."));
 
   switch (session.type) {
     case "pending-date": {
@@ -92,6 +88,7 @@ export async function handleMultiTurnReserve(kakaoId, utterance, res) {
       if (!dateArray || dateArray.length === 0) {
         return res.json(replyText("날짜/시간을 인식 못했어요. 예: '내일 오후 2시 30분'"));
       }
+
       const isoString = dateArray[0];
       const timeObj = dayjs(isoString);
       if (!timeObj.isValid() || isNaN(timeObj.hour())) {
@@ -103,7 +100,7 @@ export async function handleMultiTurnReserve(kakaoId, utterance, res) {
         session.type = "pending-am-or-pm";
         session.base_time = isoString;
         return res.json(
-          replyQuickReplies(`${timeObj.format("M월 D일 (ddd)" )} ${hour}시, 오전인가요 오후인가요?`, ["오전", "오후"])
+          replyQuickReplies(`${timeObj.format("M월 D일 (ddd)")} ${hour}시, 오전인가요 오후인가요?`, ["오전", "오후"])
         );
       }
 
@@ -162,10 +159,7 @@ export async function handleMultiTurnReserve(kakaoId, utterance, res) {
       } else if (/(아니오|노|취소|ㄴㄴ)/.test(lower)) {
         delete sessionContext[kakaoId];
         return res.json(
-          replyQuickReplies("알겠습니다. 예약을 취소했습니다. 다시 예약하시겠어요?", [
-            "오늘 3시",
-            "내일 오전 10시"
-          ])
+          replyQuickReplies("알겠습니다. 예약을 취소했습니다. 다시 예약하시겠어요?", ["오늘 3시", "내일 오전 10시"])
         );
       } else {
         return res.json(replyQuickReplies("예약을 확정할까요?", ["네", "아니오"]));
