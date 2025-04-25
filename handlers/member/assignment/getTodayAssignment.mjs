@@ -1,5 +1,5 @@
-import { supabase } from "../../services/supabase.mjs";
-import { replyText } from "../../utils/reply.mjs";
+import { supabase } from "../../../services/supabase.mjs";
+import { replyText } from "../../../utils/reply.mjs";
 
 function parseTargetDate(text) {
   const today = new Date();

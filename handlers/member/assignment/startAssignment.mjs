@@ -1,6 +1,6 @@
-import { supabase } from "../../services/supabase.mjs";
-import { replyText } from "../../utils/reply.mjs";
-import { findTodayAssignment } from "../../utils/assignmentHelper.mjs";
+import { supabase } from "../../../services/supabase.mjs";
+import { replyText } from "../../../utils/reply.mjs";
+import { findTodayAssignment } from "../../../utils/assignmentHelper.mjs";
 
 export default async function startAssignment(kakaoId, res) {
   const assignment = await findTodayAssignment(kakaoId);

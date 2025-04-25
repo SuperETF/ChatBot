@@ -1,5 +1,5 @@
-import { supabase } from "../../services/supabase.mjs";
-import { replyText } from "../../utils/reply.mjs";
+import { supabase } from "../../../services/supabase.mjs";
+import { replyText } from "../../../utils/reply.mjs";
 
 export default async function registerTrainerMember(kakaoId, utterance, res) {
   // 여러 줄 입력 지원

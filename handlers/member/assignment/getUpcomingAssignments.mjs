@@ -1,5 +1,5 @@
-import { supabase } from "../../services/supabase.mjs";
-import { replyText } from "../../utils/reply.mjs";
+import { supabase } from "../../../services/supabase.mjs";
+import { replyText } from "../../../utils/reply.mjs";
 
 export default async function getUpcomingAssignments(kakaoId, res) {
   // ✅ 1. 회원 인증

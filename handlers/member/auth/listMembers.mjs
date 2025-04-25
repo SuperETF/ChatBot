@@ -1,5 +1,5 @@
-import { supabase } from "../../services/supabase.mjs";
-import { replyText, replyButton } from "../../utils/reply.mjs";
+import { supabase } from "../../../services/supabase.mjs";
+import { replyText, replyButton } from "../../../utils/reply.mjs";
 
 export default async function listMembers(kakaoId, utterance, res) {
   // ✅ 띄어쓰기 제거 (공백 무시)
