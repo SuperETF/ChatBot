@@ -45,8 +45,8 @@ router.post("/", async (req, res) => {
         template: {
           outputs: [{ simpleText: { text: "예약 유형을 선택해주세요." } }],
           quickReplies: [
-            { label: "개인 운동", action: "message", messageText: "개인 운동" },
-            { label: "1:1 레슨", action: "message", messageText: "1:1 레슨" }
+            { label: "개인 운동", action: "message", messageText: "개인 운동 예약" },
+            { label: "1:1 레슨", action: "message", messageText: "1:1 레슨 예약" }
           ]
         }
       });
@@ -88,7 +88,7 @@ router.post("/", async (req, res) => {
         ],
         quickReplies: [
           { label: "회원 등록하기", action: "message", messageText: "회원 등록하기" },
-          { label: "개인 운동 예약", action: "message", messageText: "개인 운동 예약" },
+          { label: "개인 운동 예약", action: "message", messageText: "개인 운동" },
           { label: "과제 확인하기", action: "message", messageText: "과제 확인하기" }
         ]
       }
