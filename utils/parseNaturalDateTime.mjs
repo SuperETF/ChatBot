@@ -15,19 +15,20 @@ export function parseNaturalDateTime(utterance) {
   const results = [];
 
   // ✅ (1) 절대 날짜 우선 처리
-  const fullDateRegex = /(\d{1,2})월\s*(\d{1,2})일\s*(오전|오후)?\s*(\d{1,2})시(?:\s*(\d{1,2})분)?/g;
+  const fullDateRegex = /(?:([0-9]{4})년\s*)?(\d{1,2})월\s*(\d{1,2})일\s*(오전|오후)?\s*(\d{1,2})시(?:\s*(\d{1,2})분)?/g;
   const fullMatches = [...utterance.matchAll(fullDateRegex)];
 
   for (const match of fullMatches) {
-    const [, month, day, ampm, hourRaw, minuteRaw] = match;
+    const [, yearRaw, month, day, ampm, hourRaw, minuteRaw] = match;
     let hour = parseInt(hourRaw, 10);
     const minute = parseInt(minuteRaw || "0", 10);
 
     if (ampm === "오후" && hour < 12) hour += 12;
     if (ampm === "오전" && hour === 12) hour = 0;
 
-    let date = dayjs().set("month", parseInt(month) - 1).set("date", parseInt(day));
-    if (date.isBefore(now, "day")) date = date.add(1, "year");
+    let baseYear = yearRaw ? parseInt(yearRaw) : now.year();
+    let date = dayjs().set("year", baseYear).set("month", parseInt(month) - 1).set("date", parseInt(day));
+    if (!yearRaw && date.isBefore(now, "day")) date = date.add(1, "year");
 
     const parsed = date.hour(hour).minute(minute).second(0);
     if (parsed.isValid()) results.push(parsed.toISOString());
@@ -35,7 +36,7 @@ export function parseNaturalDateTime(utterance) {
 
   // ✅ (2) 상대 날짜 처리: 오늘/내일/모레 (중복 방지 포함)
   const relativeRegex = new RegExp(
-    `(?<!\d)(오늘|내일|모레)\s*` +
+    `(?<!\d)(오늘|내일|모레)?\s*` +
     `(오전|오후)?\s*` +
     `(?:(\d{1,2})시\s*(\d{1,2})?\s*분?|` +
     `(\d{1,2}):(\d{1,2})|` +
