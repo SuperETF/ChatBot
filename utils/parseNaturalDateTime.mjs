@@ -13,23 +13,23 @@ export function parseNaturalDateTime(utterance) {
   console.log("🔍 parseNaturalDateTime called with utterance:", utterance);
 
   const now = dayjs().second(0);
+  const todayStart = now.startOf("day");
   const results = [];
 
-  // ✅ 전처리: 의미 없는 단어 제거만 (운동/레슨/예약 등)
+  // ✅ 전처리: 의미 없는 단어 제거
   utterance = utterance
     .replace(/(\d{1,2})시\s*(운동|레슨|예약)?/g, "$1시")
     .replace(/\s+/g, " ")
     .trim();
   console.log("▶︎ after preprocessing:", utterance);
 
-  // ✅ (1) 절대 날짜 (4월 29일 오후 3시 등)
+  // ✅ (1) 절대 날짜 (YYYY년 MM월 DD일 오후 HH시 MM분)
   const fullDateRegex =
     /(?:([0-9]{4})년\s*)?(\d{1,2})월\s*(\d{1,2})일\s*(오전|오후)?\s*(\d{1,2})시(?:\s*(\d{1,2})분)?/g;
   for (const match of utterance.matchAll(fullDateRegex)) {
     const [, yearRaw, month, day, ampm, hourRaw, minuteRaw] = match;
     let hour = parseInt(hourRaw, 10);
     const minute = parseInt(minuteRaw || "0", 10);
-
     if (ampm === "오후" && hour < 12) hour += 12;
     if (ampm === "오전" && hour === 12) hour = 0;
 
@@ -61,7 +61,7 @@ export function parseNaturalDateTime(utterance) {
     if (parsed.isValid()) results.push(parsed.toISOString());
   }
 
-  // ✅ (3) 날짜만 있을 경우 (오늘/내일 등 → 12:00 기본)
+  // ✅ (3) 날짜만 (오늘, 내일 등 → 12:00 기본)
   const dayOnlyRegex = /\b(오늘|내일|모레|내일모레)\b/gi;
   for (const match of utterance.matchAll(dayOnlyRegex)) {
     const [keyword] = match;
@@ -74,7 +74,7 @@ export function parseNaturalDateTime(utterance) {
     if (parsed.isValid()) results.push(parsed.toISOString());
   }
 
-  // ✅ (4) 시간만 있을 경우 (오늘 기준으로)
+  // ✅ (4) 시간만 (오늘 기준으로)
   const timeOnlyRegex = /(오전|오후)?\s*(\d{1,2})시(?:\s*(\d{1,2})분)?/gi;
   for (const match of utterance.matchAll(timeOnlyRegex)) {
     const [, ampm, hourRaw, minuteRaw] = match;
@@ -87,8 +87,8 @@ export function parseNaturalDateTime(utterance) {
     if (parsed.isValid()) results.push(parsed.toISOString());
   }
 
-  // ✅ 결과 정리: 중복 제거 + 과거 제거 + 정렬
-  const final = [...new Set(results)].filter(iso => dayjs(iso).isSameOrAfter(now));
+  // ✅ 중복 제거 + 오늘 자정 기준 이후만 필터링
+  const final = [...new Set(results)].filter(iso => dayjs(iso).isSameOrAfter(todayStart));
   console.log("▶︎ final parsed results:", final);
   return final.sort((a, b) => dayjs(a).diff(dayjs(b)));
 }
