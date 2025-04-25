@@ -37,17 +37,18 @@ export async function reservePersonal(kakaoId, utterance, res) {
 
   const isoString = dateArray[0];
   const finalTime = dayjs(isoString);
-
-  // 시간만 있고 오전/오후 구분이 불확실할 때 (오전 0~6시, 오후 13~18시 제외)
   const hour = finalTime.hour();
-  if (hour >= 7 && hour <= 11) {
+
+  // ⚠️ 시간대가 1~11시이면 오전/오후 구분 요청
+  if (hour >= 1 && hour <= 11) {
     sessionContext[kakaoId] = {
       type: "pending-am-or-pm",
       base_time: isoString,
       member_id: member.id
     };
     return res.json(
-      replyQuickReplies(`${hour}시에 오전인가요, 오후인가요?`, ["오전", "오후"])
+      replyQuickReplies(`${hour}시에 운동 예약하신 건가요?
+오전인가요, 오후인가요?`, ["오전", "오후"])
     );
   }
 
@@ -88,11 +89,10 @@ export async function handleMultiTurnReserve(kakaoId, utterance, res) {
       const timeObj = dayjs(isoString);
       const hour = timeObj.hour();
 
-      // 오전/오후 분기
-      if (hour >= 7 && hour <= 11) {
+      if (hour >= 1 && hour <= 11) {
         session.type = "pending-am-or-pm";
         session.base_time = isoString;
-        return res.json(replyQuickReplies(`${hour}시에 오전인가요, 오후인가요?`, ["오전", "오후"]));
+        return res.json(replyQuickReplies(`${hour}시, 오전인가요 오후인가요?`, ["오전", "오후"]));
       }
 
       session.type = "pending-confirm";
