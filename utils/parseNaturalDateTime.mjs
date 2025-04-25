@@ -1,3 +1,4 @@
+// ✅ utils/parseNaturalDateTime.mjs
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat.js";
 import weekday from "dayjs/plugin/weekday.js";
@@ -25,23 +26,21 @@ export function parseNaturalDateTime(utterance) {
     if (ampm === "오후" && hour < 12) hour += 12;
     if (ampm === "오전" && hour === 12) hour = 0;
 
-    const parsed = dayjs()
-      .set("month", parseInt(month, 10) - 1)
-      .set("date", parseInt(day, 10))
-      .hour(hour)
-      .minute(minute)
-      .second(0);
+    // 💡 년도는 자동 추정: 지금보다 이전이면 다음 해로 보정
+    let date = dayjs().set("month", parseInt(month) - 1).set("date", parseInt(day));
+    if (date.isBefore(now, "day")) date = date.add(1, "year");
 
+    const parsed = date.hour(hour).minute(minute).second(0);
     if (parsed.isValid()) results.push(parsed.toISOString());
   }
 
-  // ✅ (2) "오늘/내일/모레 오후 3시" 형태 기존 대응
+  // ✅ (2) 기존: 오늘/내일/모레 + 시
   const relativeRegex = new RegExp(
-    `(오늘|내일|모레)?\\s*` +
-    `(오전|오후)?\\s*` +
-    `(?:(\\d{1,2})시\\s*(\\d{1,2})?\\s*분?|` +
-    `(\\d{1,2}):(\\d{1,2})|` +
-    `(\\d{1,2})시)`, "gi"
+    `(오늘|내일|모레)?\s*` +
+    `(오전|오후)?\s*` +
+    `(?:(\d{1,2})시\s*(\d{1,2})?\s*분?|` +
+    `(\d{1,2}):(\d{1,2})|` +
+    `(\d{1,2})시)`, "gi"
   );
 
   const relMatches = [...utterance.matchAll(relativeRegex)];
@@ -72,5 +71,7 @@ export function parseNaturalDateTime(utterance) {
     results.push(final.toISOString());
   }
 
-  return results.length > 0 ? results.sort() : null;
+  return results
+    .filter(iso => dayjs(iso).isSameOrAfter(now))
+    .sort((a, b) => dayjs(a).diff(dayjs(b)));
 }
