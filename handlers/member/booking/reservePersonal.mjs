@@ -1,7 +1,7 @@
 // ✅ handlers/booking/reservePersonal.mjs
 import dayjs from "dayjs";
-import { supabase } from "../../services/supabase.mjs";
-import { parseNaturalDateTime } from "../../utils/parseNaturalDateTime.mjs";
+import { supabase } from "../../../services/supabase.mjs"l
+import { parseNaturalDateTime } from "../../../utils/parseNaturalDateTime.mjs";
 import {
   replyText,
   replyQuickReplies,
