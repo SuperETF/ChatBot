@@ -7,9 +7,6 @@ export default async function booking(kakaoId, utterance, res, action) {
     case "reservePersonal":
       return reservePersonal(kakaoId, utterance, res);
 
-    case "handleReserveMulti":
-      return handleMultiTurnReserve(kakaoId, utterance, res);
-
     default:
       return res.json(
         replyText(`예약 관련 기능(${action})을 찾지 못했습니다.`)
