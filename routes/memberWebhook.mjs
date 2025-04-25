@@ -1,10 +1,10 @@
-// ✅ routes/webhook.mjs (회원용 리팩토링)
+// routes/webhook.mjs
 import express from "express";
 import { supabase } from "../services/supabase.mjs";
 import assignment from "../handlers/member/assignment/index.mjs";
 import * as auth from "../handlers/member/auth/index.mjs";
-import booking from "../handlers/member/booking/index.mjs";
-import { sessionContext } from "../handlers/member/booking/reservePersonal.mjs";
+// ✅ booking/index.mjs 에서 reservePersonal, handleMultiTurnReserve, sessionContext 모두 re-export
+import booking, { sessionContext } from "../handlers/member/booking/index.mjs";
 
 const router = express.Router();
 
@@ -15,23 +15,18 @@ router.post("/", async (req, res) => {
   console.log("🟡 발화 입력:", utterance);
 
   try {
-    // ✅ 멀티턴 예약 흐름 처리
-    if (sessionContext[kakaoId]) {
+    // — 이미 멀티턴 예약 흐름 중이면 handleMultiTurnReserve 호출
+    if (sessionContext[kakaoId]?.type) {
       return booking(kakaoId, utterance, res, "handleReserveMulti");
     }
 
-
-    // ✅ 멤버 등록 흐름
+    // — 멤버 등록 흐름
     if (/^멤버\s*등록하기$/.test(utterance)) {
       return res.json({
         version: "2.0",
         template: {
           outputs: [
-            {
-              simpleText: {
-                text: "어떤 멤버를 등록하시겠어요?"
-              }
-            }
+            { simpleText: { text: "어떤 멤버를 등록하시겠어요?" } }
           ],
           quickReplies: [
             { label: "전문가 등록", action: "message", messageText: "전문가 등록" },
@@ -58,18 +53,12 @@ router.post("/", async (req, res) => {
       return auth.auth(kakaoId, utterance, res, "registerTrainerMember");
     }
 
-    // ✅ 예약 선택 안내
+    // — 예약 선택 안내
     if (/^개인\s*운동\s*예약$/.test(utterance)) {
       return res.json({
         version: "2.0",
         template: {
-          outputs: [
-            {
-              simpleText: {
-                text: "예약 유형을 선택해주세요."
-              }
-            }
-          ],
+          outputs: [{ simpleText: { text: "예약 유형을 선택해주세요." } }],
           quickReplies: [
             { label: "개인 운동", action: "message", messageText: "개인 운동" },
             { label: "1:1 레슨", action: "message", messageText: "1:1 레슨" }
@@ -106,18 +95,12 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // ✅ 과제 확인 흐름
+    // — 과제 확인 흐름
     if (/^과제\s*확인하기$/.test(utterance)) {
       return res.json({
         version: "2.0",
         template: {
-          outputs: [
-            {
-              simpleText: {
-                text: "확인할 과제를 선택해주세요."
-              }
-            }
-          ],
+          outputs: [{ simpleText: { text: "확인할 과제를 선택해주세요." } }],
           quickReplies: [
             { label: "오늘 과제", action: "message", messageText: "오늘 과제" },
             { label: "예정된 과제", action: "message", messageText: "예정된 과제" }
@@ -132,7 +115,7 @@ router.post("/", async (req, res) => {
       return assignment(kakaoId, utterance, res, "getUpcomingAssignments");
     }
 
-    // ✅ fallback
+    // — fallback
     return res.json({
       version: "2.0",
       template: {
@@ -159,7 +142,12 @@ router.post("/", async (req, res) => {
       error_message: err.message,
       note: "webhook catch"
     });
-    return res.json({ version: "2.0", template: { outputs: [{ simpleText: { text: `문제가 발생했어요. 다시 시도해주세요.` } }] } });
+    return res.json({
+      version: "2.0",
+      template: {
+        outputs: [{ simpleText: { text: `문제가 발생했어요. 다시 시도해주세요.` } }]
+      }
+    });
   }
 });
 
