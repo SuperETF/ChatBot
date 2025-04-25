@@ -33,8 +33,14 @@ export async function reservePersonal(kakaoId, utterance, res) {
   // ✅ 상대 날짜 또는 오늘 키워드 우선 선택
   const todayKeywords = ["오늘", "내일", "모레"];
   const containsRelative = todayKeywords.some(keyword => utterance.includes(keyword));
+  const baseDate = dayjs();
   const isoString = containsRelative
-    ? dateArray.find(d => d.includes(dayjs().format("YYYY-MM-DD").slice(0, 8))) || dateArray[0]
+    ? dateArray.find(d => {
+        const parsed = dayjs(d);
+        return parsed.isSame(baseDate, "day") ||
+               parsed.isSame(baseDate.add(1, "day"), "day") ||
+               parsed.isSame(baseDate.add(2, "day"), "day");
+      }) || dateArray[0]
     : dateArray[0];
 
   const finalTime = dayjs(isoString);
