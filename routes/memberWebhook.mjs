@@ -40,8 +40,16 @@ router.post("/", async (req, res) => {
       return booking(kakaoId, utterance, res, "reservePersonal");
     }
     if (/^개인\s*운동$/.test(utterance)) {
+      // 챗봇 응답으로 안내 출력 후 예약 flow 진입
+      await res.json({
+        version: "2.0",
+        template: {
+          outputs: [{ simpleText: { text: "운동 시간과 함께 예약을 입력해주세요.\n예: 오늘 3시" } }]
+        }
+      });
       return booking(kakaoId, utterance, res, "reservePersonal");
     }
+    
     if (/^1:1\s*레슨$/.test(utterance)) {
       return res.json({ version: "2.0", template: { outputs: [{ simpleText: { text: "레슨 시간과 함께 예약을 입력해주세요.\n예: 5시 레슨" } }] } });
     }
