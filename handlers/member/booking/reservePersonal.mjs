@@ -2,16 +2,16 @@ import { parseNaturalDateTime } from "../../../utils/parseNaturalDateTime.mjs";
 import { replyText, replyQuickReplies, replyBasicCard } from "../../../utils/reply.mjs";
 import dayjs from "dayjs";
 
-export const sessionContext = {};
+// ✅ 예약 멀티턴 흐름 상태 저장
+const sessionContext = {};
 
 /**
- * ✅ 개인 운동 예약 시작
+ * ✅ 최초 "개인 운동" 발화 → 예약 시작
  */
-export async function reservePersonal(kakaoId, utterance, res) {
+async function reservePersonal(kakaoId, utterance, res) {
   const parsed = parseNaturalDateTime(utterance);
   const date = parsed[0];
 
-  // 📌 날짜를 인식 못했을 경우 → 멀티턴 시작
   if (!date) {
     sessionContext[kakaoId] = { flow: "personal-reservation", state: "pending-date" };
     return res.json(
@@ -22,8 +22,6 @@ export async function reservePersonal(kakaoId, utterance, res) {
   }
 
   const hour = dayjs(date).hour();
-
-  // 📌 AM/PM 구분이 필요한 경우
   if (hour >= 1 && hour <= 11) {
     sessionContext[kakaoId] = {
       flow: "personal-reservation",
@@ -35,7 +33,6 @@ export async function reservePersonal(kakaoId, utterance, res) {
     );
   }
 
-  // 📌 바로 예약 확인으로
   sessionContext[kakaoId] = {
     flow: "personal-reservation",
     state: "pending-confirm",
@@ -54,21 +51,18 @@ export async function reservePersonal(kakaoId, utterance, res) {
 /**
  * ✅ 멀티턴 흐름 처리
  */
-export async function handleMultiTurnFlow(kakaoId, utterance, res) {
+async function handleMultiTurnFlow(kakaoId, utterance, res) {
   const context = sessionContext[kakaoId];
 
-  // ⛔ 취소 흐름
   if (/취소|아니오/i.test(utterance)) {
     delete sessionContext[kakaoId];
     return res.json(replyText("예약을 취소했어요. 메인 메뉴로 돌아갑니다."));
   }
 
-  // 🔄 날짜 재입력 (멀티턴)
   if (context.state === "pending-date") {
-    return reservePersonal(kakaoId, utterance, res);
+    return reservePersonal(kakaoId, utterance, res); // 날짜 재입력 → 처음으로 돌림
   }
 
-  // 🔄 AM/PM 선택
   if (context.state === "pending-am-or-pm") {
     const base = dayjs(context.date);
     let adjusted = base;
@@ -96,7 +90,6 @@ export async function handleMultiTurnFlow(kakaoId, utterance, res) {
     );
   }
 
-  // ✅ 최종 예약 확정
   if (context.state === "pending-confirm") {
     if (/네|응|ㅇㅇ|확인/.test(utterance)) {
       const confirmedTime = dayjs(context.date);
@@ -107,9 +100,11 @@ export async function handleMultiTurnFlow(kakaoId, utterance, res) {
     }
   }
 
-  // 예외 fallback
   return res.json(replyText("❓ 예약 흐름이 꼬였어요. '개인 운동'부터 다시 시작해주세요."));
 }
 
-// ✅ 반드시 export 해줘야 오류 안 남
-export { reservePersonal, handleMultiTurnFlow, sessionContext };
+export {
+  reservePersonal,
+  handleMultiTurnFlow,
+  sessionContext
+};
