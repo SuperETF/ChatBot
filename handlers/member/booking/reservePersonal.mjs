@@ -15,7 +15,7 @@ async function reservePersonal(kakaoId, utterance, res) {
   if (!date) {
     sessionContext[kakaoId] = { flow: "personal-reservation", state: "pending-date" };
     return res.json(
-      replyQuickReplies("운동 일정을 입력해주세요. 예: '내일 오후 2시'", [
+      replyQuickReplies("일정을 입력해 주세요! 오늘 혹은 특정 날짜를 입력해 주시면 됩니다. 예: '오늘 오후 oo시' '4월 30일 5시'", [
         "오늘 오후 3시", "4월 30일 2시"
       ])
     );
