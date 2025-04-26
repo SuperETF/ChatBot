@@ -1,5 +1,5 @@
 import express from "express";
-import { auth } from "../handlers/member/auth/index.mjs";
+import auth from "../handlers/member/auth/index.mjs"; // ✅ default로 import
 import booking, { sessionContext } from "../handlers/member/booking/index.mjs";
 import assignment from "../handlers/member/assignment/index.mjs";
 
@@ -16,12 +16,9 @@ router.post("/", async (req, res) => {
       return booking(kakaoId, utterance, res, "handleReservationFlow");
     }
 
-    // — 멤버 등록 흐름
+    // — 회원 등록 흐름만
     if (/^회원\s*등록$/.test(utterance)) {
       return auth(kakaoId, utterance, res, "registerMember");
-    }
-    if (/^트레이너\s*등록$/.test(utterance)) {
-      return auth(kakaoId, utterance, res, "registerTrainerMember");
     }
 
     // — 개인 운동 예약 시작
@@ -40,13 +37,17 @@ router.post("/", async (req, res) => {
     // — fallback
     return res.json({
       version: "2.0",
-      template: { outputs: [{ simpleText: { text: "❓ 이해하지 못했어요. 다시 시도해주세요." } }] }
+      template: {
+        outputs: [{ simpleText: { text: "❓ 이해하지 못했어요. 다시 시도해주세요." } }]
+      }
     });
   } catch (err) {
     console.error("💥 webhook error:", err);
     return res.json({
       version: "2.0",
-      template: { outputs: [{ simpleText: { text: "⚡ 오류가 발생했어요." } }] }
+      template: {
+        outputs: [{ simpleText: { text: "⚡ 오류가 발생했어요." } }]
+      }
     });
   }
 });

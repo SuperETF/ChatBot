@@ -16,14 +16,21 @@ export function parseNaturalDateTime(utterance) {
   const todayStart = now.startOf("day");
   const results = [];
 
-  // ✅ 전처리: 잡단어 제거만
+  // ✅ 전처리: 붙은 표현 분리 + 잡단어 제거
   utterance = utterance
+    // "오늘오후3시" → "오늘 오후 3시"
+    .replace(/(오늘|내일)(오전|오후)?(\d{1,2})시/g, (_, d, t, h) => {
+      return [d, t || "", h + "시"].join(" ").trim();
+    })
+    // "3시운동" → "3시"
     .replace(/(\d{1,2})시\s*(운동|레슨|예약)?/g, "$1시")
+    // 다중 공백 제거
     .replace(/\s+/g, " ")
     .trim();
+
   console.log("▶︎ after preprocessing:", utterance);
 
-  // ✅ (1) 절대 날짜 우선 매칭
+  // ✅ (1) 절대 날짜 (4월 29일 오후 3시)
   const fullDateRegex =
     /(?:([0-9]{4})년\s*)?(\d{1,2})월\s*(\d{1,2})일\s*(오전|오후)?\s*(\d{1,2})시(?:\s*(\d{1,2})분)?/g;
 
@@ -42,9 +49,9 @@ export function parseNaturalDateTime(utterance) {
       if (parsed.isValid()) results.push(parsed.toISOString());
     }
   } else {
-    // ✅ (2) 상대 날짜 + 시간
+    // ✅ (2) 상대 날짜 + 시간 (오늘, 내일)
     const relativeRegex =
-      /(오늘|내일|모레|내일모레)\s*(오전|오후)?\s*(\d{1,2})시(?:\s*(\d{1,2})분)?/gi;
+      /(오늘|내일)\s*(오전|오후)?\s*(\d{1,2})시(?:\s*(\d{1,2})분)?/gi;
     for (const match of utterance.matchAll(relativeRegex)) {
       const [, keyword, ampm, hourRaw, minuteRaw] = match;
       let hour = parseInt(hourRaw, 10);
@@ -54,21 +61,17 @@ export function parseNaturalDateTime(utterance) {
 
       let base = now.clone();
       if (keyword === "내일") base = base.add(1, "day");
-      else if (keyword === "모레") base = base.add(2, "day");
-      else if (keyword === "내일모레") base = base.add(3, "day");
 
       const parsed = base.hour(hour).minute(minute).second(0);
       if (parsed.isValid()) results.push(parsed.toISOString());
     }
 
-    // ✅ (3) 날짜만
-    const dayOnlyRegex = /\b(오늘|내일|모레|내일모레)\b/gi;
+    // ✅ (3) 날짜만 (오늘/내일)
+    const dayOnlyRegex = /\b(오늘|내일)\b/gi;
     for (const match of utterance.matchAll(dayOnlyRegex)) {
       const [keyword] = match;
       let base = now.clone();
       if (keyword === "내일") base = base.add(1, "day");
-      else if (keyword === "모레") base = base.add(2, "day");
-      else if (keyword === "내일모레") base = base.add(3, "day");
 
       const parsed = base.hour(12).minute(0).second(0);
       if (parsed.isValid()) results.push(parsed.toISOString());
@@ -88,7 +91,7 @@ export function parseNaturalDateTime(utterance) {
     }
   }
 
-  // ✅ 최종 정리: 중복 제거 + 오늘 이후 필터링 + 정렬
+  // ✅ 최종 정리: 중복 제거 + 오늘 이후 + 정렬
   const final = [...new Set(results)].filter(iso => dayjs(iso).isSameOrAfter(todayStart));
   console.log("▶︎ final parsed results:", final);
   return final.sort((a, b) => dayjs(a).diff(dayjs(b)));
