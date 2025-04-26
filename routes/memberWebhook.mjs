@@ -1,5 +1,5 @@
 import express from "express";
-import { auth } from "../handlers/auth/index.mjs";
+import { auth } from "../handlers/member/auth/index.mjs";
 import booking, { sessionContext } from "../handlers/member/booking/index.mjs";
 import assignment from "../handlers/member/assignment/index.mjs";
 
