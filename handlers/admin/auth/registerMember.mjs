@@ -11,14 +11,18 @@ export default async function registerMember(kakaoId, utterance, res) {
   const name = match[1];
   const phone = match[2];
 
+  // ✅ 트레이너 인증 확인
   const { data: trainer } = await supabase
     .from("trainers")
     .select("id")
     .eq("kakao_id", kakaoId)
     .maybeSingle();
 
-  if (!trainer) return res.json(replyText("전문가 인증이 필요합니다."));
+  if (!trainer) {
+    return res.json(replyText("❗️ 전문가 인증이 필요합니다."));
+  }
 
+  // ✅ 이미 등록된 회원인지 확인
   const { data: existing } = await supabase
     .from("members")
     .select("id")
@@ -27,9 +31,10 @@ export default async function registerMember(kakaoId, utterance, res) {
     .maybeSingle();
 
   if (existing) {
-    return res.json(replyText("이미 등록된 회원입니다."));
+    return res.json(replyText("⚠️ 이미 등록된 회원입니다."));
   }
 
+  // ✅ 회원 등록
   const { error } = await supabase
     .from("members")
     .insert({
@@ -39,8 +44,9 @@ export default async function registerMember(kakaoId, utterance, res) {
     });
 
   if (error) {
+    console.error("❌ 회원 등록 실패:", error.message);
     return res.json(replyText("회원 등록 중 문제가 발생했습니다."));
   }
 
-  return res.json(replyText(`✅ ${name} 회원이 등록되었습니다.`));
+  return res.json(replyText(`✅ ${name} 회원이 성공적으로 등록되었습니다.`));
 }
