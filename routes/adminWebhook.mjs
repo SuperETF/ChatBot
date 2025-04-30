@@ -14,52 +14,52 @@ router.post("/admin", async (req, res) => {
   console.log("📥 관리자 발화:", utterance);
 
   try {
-    // ✅ 먼저 전문가 인증 여부 확인
+    // ✅ 전문가 인증 여부 확인
     const { data: trainer } = await supabase
       .from("trainers")
       .select("id")
       .eq("kakao_id", kakaoId)
       .maybeSingle();
 
+    // ✅ 인증되지 않은 경우
     if (!trainer) {
-      // 관리자 등록 (전문가 인증) 플로우
-      if (/^전문가\s*등록$/.test(utterance)) {
+      if (utterance === "전문가 등록") {
         return auth(kakaoId, utterance, res, "registerTrainerMember");
       }
-      // 인증 안 됐으면 다른 기능 사용 불가
-      return res.json(replyText("❗️ 전문가 인증이 필요합니다. 먼저 '전문가 등록'을 진행해주세요."));
+      return res.json(replyQuickReplies(
+        "❗️전문가 인증이 필요합니다. 먼저 '전문가 등록'을 진행해주세요.", 
+        [{ label: "전문가 등록", action: "message", messageText: "전문가 등록" }]
+      ));
     }
 
     // ✅ 인증된 전문가만 아래 기능 접근 가능
-
-    // 회원 등록
-    if (/^회원\s*등록$/.test(utterance)) {
+    if (utterance === "나의 회원 등록") {
       return auth(kakaoId, utterance, res, "registerMember");
     }
 
-    // 회원 목록
-    if (/^회원\s*목록$/.test(utterance)) {
+    if (utterance === "나의 회원 목록") {
       return auth(kakaoId, utterance, res, "listMembers");
     }
 
-    // 과제 부여 (루틴 추천)
-    if (/^과제\s*부여$|^루틴\s*추천$/.test(utterance)) {
+    if (utterance === "과제 생성") {
       return assignment(kakaoId, utterance, res, "generateRoutinePreview");
     }
 
-    // 과제 배정 (회원에게 루틴 배정)
-    if (/^루틴\s*배정$|^과제\s*배정$/.test(utterance)) {
-      return assignment(kakaoId, utterance, res, "assignRoutineToMember");
+    if (utterance === "과제 현황") {
+      return assignment(kakaoId, utterance, res, "getAssignmentStatus");
     }
 
-    // fallback
-    return res.json(replyQuickReplies("가능한 관리자 기능 목록입니다:", [
-      "전문가 등록", "회원 등록", "회원 목록", "과제 부여", "과제 배정"
+    // ✅ fallback
+    return res.json(replyQuickReplies("🧭 가능한 전문가 기능입니다:", [
+      { label: "나의 회원 등록", messageText: "나의 회원 등록" },
+      { label: "나의 회원 목록", messageText: "나의 회원 목록" },
+      { label: "과제 생성", messageText: "과제 생성" },
+      { label: "과제 현황", messageText: "과제 현황" }
     ]));
 
   } catch (err) {
     console.error("💥 admin webhook error:", err);
-    return res.json(replyText("관리자 챗봇 처리 중 오류가 발생했습니다."));
+    return res.json(replyText("⚠️ 관리자 챗봇 처리 중 오류가 발생했습니다."));
   }
 });
 
