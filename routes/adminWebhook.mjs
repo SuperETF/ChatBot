@@ -8,16 +8,16 @@ export default async function adminWebhook(req, res) {
   const utterance = (body.userRequest?.utterance || "").trim();
   const kakaoId = body.userRequest?.user?.id;
 
-  // ✅ 요청 검증
+  // ✅ 요청 유효성 검증
   if (!utterance || !kakaoId) {
-    console.warn("❗ 잘못된 요청: userRequest 없음");
+    console.warn("❗ 잘못된 요청: userRequest 내 utterance 또는 user.id 없음");
     return res.status(400).json({
       version: "2.0",
       template: {
         outputs: [
           {
             simpleText: {
-              text: "❌ 요청 형식이 잘못되었습니다.\nPOST 방식으로 호출해주세요."
+              text: "❌ 요청이 올바르지 않습니다.\n버튼을 눌러 다시 시도해주세요."
             }
           }
         ],
@@ -37,7 +37,7 @@ export default async function adminWebhook(req, res) {
       .eq("kakao_id", kakaoId)
       .maybeSingle();
 
-    // 🔒 전문가 인증되지 않은 상태
+    // ✅ 전문가 인증되지 않은 경우
     if (!trainer) {
       if (utterance === "전문가 등록") {
         return auth(kakaoId, utterance, res, "registerTrainerMember");
@@ -48,7 +48,7 @@ export default async function adminWebhook(req, res) {
       ]));
     }
 
-    // ✅ 버튼 발화 기준 처리
+    // ✅ 전문가 인증된 이후 분기 처리
     if (utterance === "나의 회원 등록") {
       return auth(kakaoId, utterance, res, "registerMember");
     }
@@ -71,8 +71,8 @@ export default async function adminWebhook(req, res) {
       ]));
     }
 
-    // ✅ fallback (인식되지 않은 발화)
-    return res.json(replyQuickReplies("🧭 전문가 기능입니다. 버튼을 눌러 선택해주세요:", [
+    // ✅ fallback
+    return res.json(replyQuickReplies("🧭 전문가 기능입니다. 아래 버튼 중 하나를 선택해주세요:", [
       { label: "나의 회원 등록", messageText: "나의 회원 등록" },
       { label: "나의 회원 목록", messageText: "나의 회원 목록" },
       { label: "과제 생성", messageText: "과제 생성" },
