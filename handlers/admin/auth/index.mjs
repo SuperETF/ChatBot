@@ -11,3 +11,5 @@ export const auth = async (kakaoId, utterance, res, action) => {
       return res.json(replyText("❓ 관리자용 회원 기능에서 처리할 수 없습니다."));
   }
 };
+
+export default auth;
