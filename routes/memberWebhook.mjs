@@ -2,6 +2,7 @@ import express from "express";
 import auth from "../handlers/member/auth/index.mjs";
 import booking, { sessionContext } from "../handlers/member/booking/index.mjs";
 import assignment from "../handlers/member/assignment/index.mjs";
+import { supabase } from "../../services/supabase.mjs";
 
 const router = express.Router();
 
@@ -11,12 +12,16 @@ router.post("/", async (req, res) => {
   console.log("🟡 발화 입력:", utterance);
 
   try {
-    // ✅ 예약 멀티턴 흐름
+    /** ✅ 예약 관련 멀티턴 흐름 감지 */
     if (sessionContext[kakaoId]?.flow === "personal-reservation") {
       return booking(kakaoId, utterance, res, "handleReservationFlow");
     }
 
-    // ✅ 회원 등록 입력 포맷: [이름] [전화번호] [비밀번호] or "회원 조만갑 ..."
+    if (sessionContext[kakaoId]?.flow === "cancel") {
+      return booking(kakaoId, utterance, res, "handleCancelFlow");
+    }
+
+    /** ✅ 회원 등록 처리 */
     if (
       /^회원\s+[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/.test(utterance) ||
       /^[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/.test(utterance)
@@ -24,7 +29,6 @@ router.post("/", async (req, res) => {
       return auth(kakaoId, utterance, res, "registerMember");
     }
 
-    // ✅ 회원 등록 안내 (유도 버튼)
     if (/^회원\s*등록$/.test(utterance)) {
       return res.json({
         version: "2.0",
@@ -35,44 +39,136 @@ router.post("/", async (req, res) => {
                 text: "회원 등록을 위해 아래 형식으로 입력해주세요:\n\n예: 홍길동 01012345678 1234"
               }
             }
+          ],
+          quickReplies: [{ label: "메인 메뉴", action: "message", messageText: "메인 메뉴" }]
+        }
+      });
+    }
+
+    /** ✅ 예약 관련 */
+    if (/^개인\s*운동$/.test(utterance)) {
+      return booking(kakaoId, utterance, res, "startPersonalReservation");
+    }
+
+    if (/^예약\s*취소$/.test(utterance)) {
+      return booking(kakaoId, utterance, res, "startCancelReservation");
+    }
+
+    if (/^내\s*(예약|일정|스케줄)$/.test(utterance)) {
+      return booking(kakaoId, utterance, res, "showMyReservations");
+    }
+
+    /** ✅ 과제 확인 */
+    if (/^오늘\s*과제$/.test(utterance)) {
+      return assignment(kakaoId, utterance, res, "getTodayAssignment");
+    }
+
+    if (/^예정된\s*과제$/.test(utterance)) {
+      return assignment(kakaoId, utterance, res, "getUpcomingAssignments");
+    }
+
+    /** ✅ 메인 메뉴 */
+    if (/메인\s*메뉴/i.test(utterance)) {
+      delete sessionContext[kakaoId];
+      return res.json({
+        version: "2.0",
+        template: {
+          outputs: [
+            {
+              simpleText: {
+                text:
+                  "🧭 메인 메뉴입니다.\n- 회원 등록\n- 개인 운동 예약\n- 예약 확인/취소\n- 오늘 과제 확인"
+              }
+            }
+          ],
+          quickReplies: [
+            { label: "회원 등록", action: "message", messageText: "회원 등록" },
+            { label: "개인 운동", action: "message", messageText: "개인 운동" },
+            { label: "예약 취소", action: "message", messageText: "예약 취소" },
+            { label: "오늘 과제", action: "message", messageText: "오늘 과제" }
           ]
         }
       });
     }
 
-    // ✅ 개인 운동 예약 시작
-    if (/^개인\s*운동$/.test(utterance)) {
-      return booking(kakaoId, utterance, res, "startPersonalReservation");
+    /** ✅ 도움말 */
+    if (/도움말|help/i.test(utterance)) {
+      delete sessionContext[kakaoId];
+      return res.json({
+        version: "2.0",
+        template: {
+          outputs: [
+            {
+              simpleText: {
+                text:
+                  "📖 도움말\n" +
+                  "- 회원 등록: '홍길동 01012345678 1234'\n" +
+                  "- 예약: '개인 운동'\n" +
+                  "- 예약 취소: '예약 취소'\n" +
+                  "- 예약 확인: '내 예약'\n" +
+                  "- 과제 확인: '오늘 과제'\n\n'메인 메뉴'라고 입력하시면 처음부터 다시 시작할 수 있어요."
+              }
+            }
+          ],
+          quickReplies: [
+            { label: "메인 메뉴", action: "message", messageText: "메인 메뉴" }
+          ]
+        }
+      });
     }
 
-    // ✅ 과제 확인 흐름
-    if (/^오늘\s*과제$/.test(utterance)) {
-      return assignment(kakaoId, utterance, res, "getTodayAssignment");
-    }
-    if (/^예정된\s*과제$/.test(utterance)) {
-      return assignment(kakaoId, utterance, res, "getUpcomingAssignments");
-    }
+    /** ✅ fallback 처리 */
+    await supabase.from("fallback_logs").insert({
+      kakao_id: kakaoId,
+      utterance,
+      intent: "member-fallback",
+      handler: "member-router",
+      action: null,
+      error_message: null,
+      timestamp: new Date(),
+      note: "member fallback"
+    });
 
-    // ✅ fallback
     return res.json({
       version: "2.0",
       template: {
         outputs: [
           {
             simpleText: {
-              text: "❓ 이해하지 못했어요. 다시 시도해주세요."
+              text: "❓ 이해하지 못했어요. 아래에서 선택해보세요!"
             }
           }
+        ],
+        quickReplies: [
+          { label: "회원 등록", action: "message", messageText: "회원 등록" },
+          { label: "개인 운동", action: "message", messageText: "개인 운동" },
+          { label: "오늘 과제", action: "message", messageText: "오늘 과제" },
+          { label: "도움말", action: "message", messageText: "도움말" }
         ]
       }
     });
   } catch (err) {
     console.error("💥 webhook error:", err);
+
+    await supabase.from("fallback_logs").insert({
+      kakao_id: kakaoId,
+      utterance,
+      intent: "member-catch",
+      handler: "member-router",
+      error_message: err.message,
+      timestamp: new Date(),
+      note: "try-catch error"
+    });
+
     return res.json({
       version: "2.0",
       template: {
         outputs: [
-          { simpleText: { text: "⚡ 오류가 발생했어요. 잠시 후 다시 시도해주세요." } }
+          {
+            simpleText: {
+              text: "⚡ 오류가 발생했어요. 잠시 후 다시 시도해주세요."
+            }
+          }
         ]
       }
     });
