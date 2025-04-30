@@ -132,38 +132,45 @@ if (
     }
 
     /** ✅ fallback 처리 */
-    await supabase.from("fallback_logs").insert({
-      kakao_id: kakaoId,
-      utterance,
-      intent: "member-fallback",
-      handler: "member-router",
-      action: null,
-      error_message: null,
-      timestamp: new Date(),
-      note: "member fallback"
-    });
+try {
+  await supabase.from("fallback_logs").insert({
+    kakao_id: kakaoId,
+    utterance,
+    intent: "member-fallback",
+    handler: "member-router",
+    action: null,
+    error_message: null,
+    timestamp: new Date(),
+    note: "member fallback"
+  });
+} catch (insertErr) {
+  console.error("❌ fallback_logs insert 실패:", insertErr.message);
+}
 
-    return res.json({
-      version: "2.0",
-      template: {
-        outputs: [
-          {
-            simpleText: {
-              text: "❓ 이해하지 못했어요. 아래에서 선택해보세요!"
-            }
-          }
-        ],
-        quickReplies: [
-          { label: "회원 등록", action: "message", messageText: "회원 등록" },
-          { label: "개인 운동", action: "message", messageText: "개인 운동" },
-          { label: "오늘 과제", action: "message", messageText: "오늘 과제" },
-          { label: "도움말", action: "message", messageText: "도움말" }
-        ]
+return res.json({
+  version: "2.0",
+  template: {
+    outputs: [
+      {
+        simpleText: {
+          text: "❓ 이해하지 못했어요. 아래에서 선택해보세요!"
+        }
       }
-    });
-  } catch (err) {
-    console.error("💥 webhook error:", err);
+    ],
+    quickReplies: [
+      { label: "회원 등록", action: "message", messageText: "회원 등록" },
+      { label: "개인 운동 예약", action: "message", messageText: "개인 운동 예약" },
+      { label: "예약 확인", action: "message", messageText: "예약 확인" },
+      { label: "오늘 과제", action: "message", messageText: "오늘 과제" }
+    ]
+  }
+});
 
+  /** ✅ catch 에러 핸들링 */
+} catch (err) {
+  console.error("💥 webhook error:", err);
+
+  try {
     await supabase.from("fallback_logs").insert({
       kakao_id: kakaoId,
       utterance,
@@ -173,20 +180,23 @@ if (
       timestamp: new Date(),
       note: "try-catch error"
     });
-
-    return res.json({
-      version: "2.0",
-      template: {
-        outputs: [
-          {
-            simpleText: {
-              text: "⚡ 오류가 발생했어요. 잠시 후 다시 시도해주세요."
-            }
-          }
-        ]
-      }
-    });
+  } catch (catchInsertErr) {
+    console.error("❌ catch fallback_logs insert 실패:", catchInsertErr.message);
   }
+
+  return res.json({
+    version: "2.0",
+    template: {
+      outputs: [
+        {
+          simpleText: {
+            text: "⚡ 오류가 발생했어요. 잠시 후 다시 시도해주세요."
+          }
+        }
+      ]
+    }
+  });
+}
 });
 
 export default router;
