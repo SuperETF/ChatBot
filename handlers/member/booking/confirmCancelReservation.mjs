@@ -8,10 +8,10 @@ export default async function confirmCancelReservation(kakaoId, utterance, res) 
     return res.json(replyText("먼저 '예약 취소'를 입력해 일정을 선택해주세요."));
   }
 
-  const reservationId = utterance.trim();
-  const label = ctx.options[reservationId];
+  const label = utterance.trim();
+  const reservationId = ctx.options[label];  // ✅ 날짜 → UUID
 
-  if (!label) {
+  if (!reservationId) {
     return res.json(replyText("❗ 선택한 예약을 찾을 수 없습니다."));
   }
 
@@ -23,6 +23,7 @@ export default async function confirmCancelReservation(kakaoId, utterance, res) 
   delete cancelContext[kakaoId];
 
   if (error) {
+    console.error("❌ 예약 취소 실패:", error.message);
     return res.json(replyText("❌ 예약 취소 중 문제가 발생했습니다."));
   }
 
