@@ -5,7 +5,7 @@ import { replyText } from "../../../utils/reply.mjs";
 export default async function registerMember(kakaoId, utterance, res) {
   const match = utterance.match(/([가-힣]{2,10})\s+(01[016789][0-9]{7,8})/);
   if (!match) {
-    return res.json(replyText("📌 등록 형식은 '이름 전화번호' 입니다.\n예: 김영희 01012345678"));
+    return res.json(replyText("📌 등록 형식은 '이름 전화번호' 입니다.\n예: 회원 김영희 01012345678"));
   }
 
   const name = match[1];

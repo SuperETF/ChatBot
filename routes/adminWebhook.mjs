@@ -1,9 +1,12 @@
+import express from "express";
 import { supabase } from "../services/supabase.mjs";
 import auth from "../handlers/admin/auth/index.mjs";
 import assignment from "../handlers/admin/assignment/index.mjs";
 import { replyText, replyQuickReplies } from "../utils/reply.mjs";
 
-export default async function adminWebhook(req, res) {
+const router = express.Router();
+
+router.post("/", async (req, res) => {
   const body = req.body || {};
   const utterance = (body.userRequest?.utterance || "").trim();
   const kakaoId = body.userRequest?.user?.id;
@@ -32,19 +35,16 @@ export default async function adminWebhook(req, res) {
       .eq("kakao_id", kakaoId)
       .maybeSingle();
 
-    // ✅ 안내: 전문가 등록 발화 → 안내 응답
     if (!trainer && utterance === "전문가 등록") {
       return res.json(replyQuickReplies("✅ 전문가 등록을 위해 아래 형식으로 입력해주세요:\n\n예: 전문가 홍길동 01012345678 0412", [
         { label: "메인 메뉴", messageText: "메인 메뉴" }
       ]));
     }
 
-    // ✅ 전문가 인증 포맷 입력 → 인증 처리
     if (!trainer && /^전문가\s+[가-힣]{2,10}\s+01[016789][0-9]{7,8}\s+\d{4}$/.test(utterance)) {
       return auth(kakaoId, utterance, res, "registerTrainerMember");
     }
 
-    // ✅ 이후: 인증된 전문가용 메뉴 분기
     if (utterance === "나의 회원 등록") {
       return auth(kakaoId, utterance, res, "registerMember");
     }
@@ -72,4 +72,6 @@ export default async function adminWebhook(req, res) {
     console.error("❌ adminWebhook error:", err.message);
     return res.json(replyText("⚠️ 관리자 챗봇 처리 중 오류가 발생했습니다."));
   }
-}
+});
+
+export default router;
