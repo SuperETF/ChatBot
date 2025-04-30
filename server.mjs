@@ -26,16 +26,39 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ 라우터 연결
+// ✅ 라우터 연결 (POST 요청 전용)
 app.use("/kakao/webhook", memberWebhook);  // 회원용
-app.use("/kakao/admin", adminWebhook);     // 전문가용
+app.use("/kakao/admin", adminWebhook);     // 관리자용
 
-// ✅ (선택) GET 요청에 대한 안내 처리 추가
+// ✅ 오픈빌더 '웹훅 테스트' (GET) 대응용 - JSON 스킬 응답 포맷 반환
 app.get("/kakao/admin", (req, res) => {
-  res.send("✅ 관리자 웹훅은 POST 방식으로 호출해야 합니다.");
+  res.json({
+    version: "2.0",
+    template: {
+      outputs: [
+        {
+          simpleText: {
+            text: "✅ 관리자 웹훅 정상 연결됨.\n(POST 요청 시 기능이 동작합니다.)"
+          }
+        }
+      ]
+    }
+  });
 });
+
 app.get("/kakao/webhook", (req, res) => {
-  res.send("✅ 회원 웹훅은 POST 방식으로 호출해야 합니다.");
+  res.json({
+    version: "2.0",
+    template: {
+      outputs: [
+        {
+          simpleText: {
+            text: "✅ 회원 웹훅 정상 연결됨.\n(POST 요청 시 기능이 동작합니다.)"
+          }
+        }
+      ]
+    }
+  });
 });
 
 // ✅ 404 처리
