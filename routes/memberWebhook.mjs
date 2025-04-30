@@ -64,9 +64,13 @@ if (cancelContext[kakaoId]?.flow === "cancel-waiting") {
   return booking(kakaoId, utterance, res, "handleCancelFlow");
 }
 
-    if (/^내\s*(예약|일정|스케줄)$/.test(utterance)) {
-      return booking(kakaoId, utterance, res, "showMyReservations");
-    }
+    // ✅ 예약 확인 발화 추가
+if (
+  /^내\s*(예약|일정|스케줄)$/.test(utterance) ||
+  /예약\s*확인/.test(utterance)           // ← 이 줄 추가!
+) {
+  return booking(kakaoId, utterance, res, "showMyReservations");
+}
 
     /** ✅ 과제 확인 */
     if (/^오늘\s*과제$/.test(utterance)) {
