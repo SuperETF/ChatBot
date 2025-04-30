@@ -2,7 +2,7 @@ import express from "express";
 import auth from "../handlers/member/auth/index.mjs";
 import booking, { sessionContext } from "../handlers/member/booking/index.mjs";
 import assignment from "../handlers/member/assignment/index.mjs";
-import { supabase } from "../../services/supabase.mjs";
+import { supabase } from "../services/supabase.mjs";
 
 const router = express.Router();
 
