@@ -82,9 +82,20 @@ export async function handleMultiTurnFlow(kakaoId, utterance, res) {
     if (/네|응|ㅇㅇ|확인/.test(utterance)) {
       const confirmedTime = dayjs(context.date);
 
-      // ✅ Supabase에 예약 저장
+      // ✅ member_id 조회
+      const { data: member } = await supabase
+        .from("members")
+        .select("id")
+        .eq("kakao_id", kakaoId)
+        .maybeSingle();
+
+      if (!member) {
+        return res.json(replyText("먼저 회원 등록이 필요합니다."));
+      }
+
+      // ✅ 예약 저장
       const { error } = await supabase.from("reservations").insert({
-        kakao_id: kakaoId,
+        member_id: member.id,
         reservation_time: confirmedTime.toISOString(),
         status: "reserved",
         type: "personal"
