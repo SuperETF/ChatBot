@@ -11,10 +11,10 @@ export default async function confirmCancelReservation(kakaoId, utterance, res) 
     return res.json(replyText("취소할 예약을 먼저 선택해주세요. '예약 취소'를 입력하세요."));
   }
 
-  const id = ctx.options[utterance];
-  if (!id) {
-    return res.json(replyText("해당 시간의 예약을 찾을 수 없습니다."));
-  }
+  const id = cancelContext[kakaoId]?.options?.[utterance];
+if (!id) {
+  return res.json(replyText("❗ 선택한 시간의 예약을 찾을 수 없습니다. 다시 시도해주세요."));
+}
 
   const { error } = await supabase
     .from("reservations")

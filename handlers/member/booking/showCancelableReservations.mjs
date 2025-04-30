@@ -33,13 +33,14 @@ export default async function showCancelableReservations(kakaoId, utterance, res
   cancelContext[kakaoId] = {
     flow: "cancel-waiting",
     options: reservations.reduce((acc, r) => {
-      const label = dayjs(r.reservation_time).format("M월 D일 HH시");
+      const label = dayjs(r.reservation_time).format("YYYY-MM-DD HH:mm");
       acc[label] = r.id;
       return acc;
     }, {})
   };
-
+  
   return res.json(
     replyQuickReplies("❌ 취소할 시간을 선택하세요:", Object.keys(cancelContext[kakaoId].options))
   );
+  
 }
