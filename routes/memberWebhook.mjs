@@ -50,9 +50,15 @@ router.post("/", async (req, res) => {
       return booking(kakaoId, utterance, res, "startPersonalReservation");
     }
 
-    if (/^예약\s*취소$/.test(utterance)) {
-      return booking(kakaoId, utterance, res, "startCancelReservation");
-    }
+    // 예약 취소 시작
+if (/^예약\s*취소$/.test(utterance)) {
+  return booking(kakaoId, utterance, res, "startCancelReservation");
+}
+
+// 예약 취소 버튼 클릭 (예약 ID)
+if (cancelContext[kakaoId]?.flow === "cancel-waiting") {
+  return booking(kakaoId, utterance, res, "handleCancelFlow");
+}
 
     if (/^내\s*(예약|일정|스케줄)$/.test(utterance)) {
       return booking(kakaoId, utterance, res, "showMyReservations");

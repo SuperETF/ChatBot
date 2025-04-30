@@ -1,12 +1,10 @@
+// ✅ handlers/member/booking/showCancelableReservations.mjs
 import { supabase } from "../../../services/supabase.mjs";
 import { replyQuickReplies, replyText } from "../../../utils/reply.mjs";
 import dayjs from "dayjs";
 
 export const cancelContext = {};
 
-/**
- * 예약 취소 버튼 흐름 시작 → 예약 목록을 QuickReplies로 보여줌
- */
 export default async function showCancelableReservations(kakaoId, utterance, res) {
   const { data: member } = await supabase
     .from("members")
@@ -29,18 +27,31 @@ export default async function showCancelableReservations(kakaoId, utterance, res
     return res.json(replyText("현재 예약된 일정이 없습니다."));
   }
 
-  // 세션에 취소할 항목 저장
   cancelContext[kakaoId] = {
     flow: "cancel-waiting",
     options: reservations.reduce((acc, r) => {
       const label = dayjs(r.reservation_time).format("YYYY-MM-DD HH:mm");
-      acc[label] = r.id;
+      acc[r.id] = label;
       return acc;
     }, {})
   };
-  
-  return res.json(
-    replyQuickReplies("❌ 취소할 시간을 선택하세요:", Object.keys(cancelContext[kakaoId].options))
-  );
-  
+
+  return res.json({
+    version: "2.0",
+    template: {
+      outputs: [
+        {
+          simpleText: { text: "❌ 취소할 시간을 선택하세요:" }
+        }
+      ],
+      quickReplies: reservations.map(r => {
+        const label = dayjs(r.reservation_time).format("YYYY-MM-DD HH:mm");
+        return {
+          label,
+          action: "message",
+          messageText: r.id.toString()
+        };
+      })
+    }
+  });
 }
