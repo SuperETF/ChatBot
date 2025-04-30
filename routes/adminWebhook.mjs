@@ -8,21 +8,16 @@ export default async function adminWebhook(req, res) {
   const utterance = (body.userRequest?.utterance || "").trim();
   const kakaoId = body.userRequest?.user?.id;
 
-  // ✅ 요청 유효성 검증
   if (!utterance || !kakaoId) {
-    console.warn("❗ 잘못된 요청: userRequest 내 utterance 또는 user.id 없음");
     return res.status(400).json({
       version: "2.0",
       template: {
         outputs: [
           {
             simpleText: {
-              text: "❌ 요청이 올바르지 않습니다.\n버튼을 눌러 다시 시도해주세요."
+              text: "❌ 요청 형식이 잘못되었습니다. 버튼을 눌러 다시 시도해주세요."
             }
           }
-        ],
-        quickReplies: [
-          { label: "메인 메뉴", messageText: "메인 메뉴" }
         ]
       }
     });
@@ -37,18 +32,18 @@ export default async function adminWebhook(req, res) {
       .eq("kakao_id", kakaoId)
       .maybeSingle();
 
-    // ✅ 전문가 인증되지 않은 경우
-    if (!trainer) {
-      if (utterance === "전문가 등록") {
-        return auth(kakaoId, utterance, res, "registerTrainerMember");
-      }
-
-      return res.json(replyQuickReplies("❗ 전문가 인증이 필요합니다.", [
-        { label: "전문가 등록", messageText: "전문가 등록" }
+    // ✅ 전문가 인증 전 → 발화만 안내 메시지 처리
+    if (!trainer && utterance === "전문가 등록") {
+      return res.json(replyQuickReplies("✅ 전문가 등록을 위해 아래 형식으로 입력해주세요:\n\n예: 전문가 홍길동 01012345678 0412", [
+        { label: "메인 메뉴", messageText: "메인 메뉴" }
       ]));
     }
 
-    // ✅ 전문가 인증된 이후 분기 처리
+    // ✅ 전문가 인증 처리
+    if (!trainer) {
+      return auth(kakaoId, utterance, res, "registerTrainerMember");
+    }
+
     if (utterance === "나의 회원 등록") {
       return auth(kakaoId, utterance, res, "registerMember");
     }
@@ -65,36 +60,14 @@ export default async function adminWebhook(req, res) {
       return assignment(kakaoId, utterance, res, "getAssignmentStatus");
     }
 
-    if (utterance === "개인 운동 현황") {
-      return res.json(replyQuickReplies("📊 [개인 운동 현황] 기능은 준비 중입니다.", [
-        { label: "메인 메뉴", messageText: "메인 메뉴" }
-      ]));
-    }
-
-    // ✅ fallback
-    return res.json(replyQuickReplies("🧭 전문가 기능입니다. 아래 버튼 중 하나를 선택해주세요:", [
+    return res.json(replyQuickReplies("🧭 전문가 기능입니다. 버튼을 눌러 선택해주세요:", [
       { label: "나의 회원 등록", messageText: "나의 회원 등록" },
       { label: "나의 회원 목록", messageText: "나의 회원 목록" },
       { label: "과제 생성", messageText: "과제 생성" },
       { label: "과제 현황", messageText: "과제 현황" }
     ]));
-
   } catch (err) {
     console.error("❌ adminWebhook error:", err.message);
-    return res.json({
-      version: "2.0",
-      template: {
-        outputs: [
-          {
-            simpleText: {
-              text: "⚠️ 관리자 기능 처리 중 오류가 발생했습니다.\n잠시 후 다시 시도해주세요."
-            }
-          }
-        ],
-        quickReplies: [
-          { label: "메인 메뉴", messageText: "메인 메뉴" }
-        ]
-      }
-    });
+    return res.json(replyText("⚠️ 관리자 챗봇 처리 중 오류가 발생했습니다."));
   }
 }

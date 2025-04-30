@@ -3,7 +3,7 @@ import registerTrainer from "./registerTrainer.mjs";
 import registerMember from "./registerMember.mjs";
 import listMembers from "./listMembers.mjs";
 
-export const auth = async (kakaoId, utterance, res, action) => {
+export default async function auth(kakaoId, utterance, res, action) {
   switch (action) {
     case "registerTrainerMember":
       return registerTrainer(kakaoId, utterance, res);
@@ -12,8 +12,6 @@ export const auth = async (kakaoId, utterance, res, action) => {
     case "listMembers":
       return listMembers(kakaoId, utterance, res);
     default:
-      return res.json(replyText("❓ 관리자용 회원 기능에서 처리할 수 없습니다."));
+      return res.json(replyText("❓ 관리자 인증 처리 중 알 수 없는 요청입니다."));
   }
-};
-
-export default auth;
+}

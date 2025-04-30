@@ -1,6 +1,5 @@
-// handlers/auth/registerTrainer.mjs
 import { supabase } from "../../../services/supabase.mjs";
-import { replyText } from "../../../utils/reply.mjs";
+import { replyQuickReplies, replyText } from "../../../utils/reply.mjs";
 
 export default async function registerTrainer(kakaoId, utterance, res) {
   const match = utterance.match(/전문가\s*([가-힣]{2,10})\s+(01[016789][0-9]{7,8})\s+(\d{4})/);
@@ -40,5 +39,8 @@ export default async function registerTrainer(kakaoId, utterance, res) {
     return res.json(replyText("트레이너 인증 중 문제가 발생했습니다. 다시 시도해주세요."));
   }
 
-  return res.json(replyText(`${name} 트레이너님, 인증이 완료되었습니다.`));
+  return res.json(replyQuickReplies(`${name} 트레이너님, 인증이 완료되었습니다.`, [
+    { label: "나의 회원 등록", messageText: "나의 회원 등록" },
+    { label: "과제 생성", messageText: "과제 생성" }
+  ]));
 }
