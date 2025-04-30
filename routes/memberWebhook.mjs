@@ -4,7 +4,11 @@ import booking, { sessionContext } from "../handlers/member/booking/index.mjs";
 import assignment from "../handlers/member/assignment/index.mjs";
 import { supabase } from "../services/supabase.mjs";
 
+// ✅ 누락된 cancelContext import 추가
+import { cancelContext } from "../handlers/member/booking/showCancelableReservations.mjs";
+
 const router = express.Router();
+
 
 router.post("/", async (req, res) => {
   const utterance = (req.body.userRequest?.utterance || "").trim();
@@ -59,7 +63,6 @@ if (/^예약\s*취소$/.test(utterance)) {
 if (cancelContext[kakaoId]?.flow === "cancel-waiting") {
   return booking(kakaoId, utterance, res, "handleCancelFlow");
 }
-
 
     if (/^내\s*(예약|일정|스케줄)$/.test(utterance)) {
       return booking(kakaoId, utterance, res, "showMyReservations");
