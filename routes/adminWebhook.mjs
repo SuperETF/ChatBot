@@ -7,7 +7,7 @@ export default async function adminWebhook(req, res) {
   const utterance = (req.body.userRequest?.utterance || "").trim();
   const kakaoId = req.body.userRequest?.user?.id;
 
-  console.log("📥 관리자 발화:", utterance);
+  console.log("📩 관리자 발화:", utterance);
 
   try {
     const { data: trainer } = await supabase
@@ -16,6 +16,7 @@ export default async function adminWebhook(req, res) {
       .eq("kakao_id", kakaoId)
       .maybeSingle();
 
+    // 🔐 인증되지 않은 경우
     if (!trainer) {
       if (utterance === "전문가 등록") {
         return auth(kakaoId, utterance, res, "registerTrainerMember");
@@ -25,19 +26,32 @@ export default async function adminWebhook(req, res) {
       ]));
     }
 
-    if (utterance === "나의 회원 등록") return auth(kakaoId, utterance, res, "registerMember");
-    if (utterance === "나의 회원 목록") return auth(kakaoId, utterance, res, "listMembers");
-    if (utterance === "과제 생성") return assignment(kakaoId, utterance, res, "generateRoutinePreview");
-    if (utterance === "과제 현황") return assignment(kakaoId, utterance, res, "getAssignmentStatus");
+    // 🔐 인증된 경우 가능한 기능 분기
+    if (utterance === "내 회원 등록") {
+      return auth(kakaoId, utterance, res, "registerMember");
+    }
 
-    return res.json(replyQuickReplies("🧭 가능한 전문가 기능입니다:", [
-      { label: "나의 회원 등록", messageText: "나의 회원 등록" },
-      { label: "나의 회원 목록", messageText: "나의 회원 목록" },
+    if (utterance === "내 회원 목록") {
+      return auth(kakaoId, utterance, res, "listMembers");
+    }
+
+    if (utterance === "과제 생성") {
+      return assignment(kakaoId, utterance, res, "generateRoutinePreview");
+    }
+
+    if (utterance === "과제 현황") {
+      return assignment(kakaoId, utterance, res, "getAssignmentStatus");
+    }
+
+    // fallback
+    return res.json(replyQuickReplies("🧭 전문가 메뉴입니다:", [
+      { label: "내 회원 등록", messageText: "내 회원 등록" },
+      { label: "내 회원 목록", messageText: "내 회원 목록" },
       { label: "과제 생성", messageText: "과제 생성" },
       { label: "과제 현황", messageText: "과제 현황" }
     ]));
   } catch (err) {
-    console.error("💥 admin webhook error:", err);
+    console.error("❌ admin webhook error:", err.message);
     return res.json(replyText("⚠️ 관리자 챗봇 처리 중 오류가 발생했습니다."));
   }
 }

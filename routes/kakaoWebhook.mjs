@@ -11,8 +11,8 @@ router.post("/webhook", async (req, res) => {
 
   console.log("🎯 [웹훅 진입]:", utterance);
 
-  // ✅ admin 판단 기준: "완전 일치"만 허용
-  const adminKeywords = [
+  // ✅ 관리자 발화 정확히 일치하는 것만 허용
+  const adminTriggers = [
     "전문가 등록",
     "내 회원 등록",
     "내 회원 목록",
@@ -20,9 +20,8 @@ router.post("/webhook", async (req, res) => {
     "과제 현황"
   ];
 
-  const isAdminFlow = adminKeywords.includes(utterance); // 🎯 핵심 수정: includes(utterance)
+  const isAdminFlow = adminTriggers.includes(utterance); // ✅ 포괄 조건 말고 정확히 일치
 
-  // ✅ 실제 전문가로 등록돼 있는지 확인
   const { data: trainer } = await supabase
     .from("trainers")
     .select("id")
