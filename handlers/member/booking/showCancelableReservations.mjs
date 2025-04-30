@@ -1,6 +1,5 @@
-// ✅ handlers/member/booking/showCancelableReservations.mjs
 import { supabase } from "../../../services/supabase.mjs";
-import { replyQuickReplies, replyText } from "../../../utils/reply.mjs";
+import { replyText } from "../../../utils/reply.mjs";
 import dayjs from "dayjs";
 
 export const cancelContext = {};
@@ -41,7 +40,7 @@ export default async function showCancelableReservations(kakaoId, utterance, res
     template: {
       outputs: [
         {
-          simpleText: { text: "❌ 취소할 시간을 선택하세요:" }
+          simpleText: { text: "❌ 취소할 예약을 선택하세요:" }
         }
       ],
       quickReplies: reservations.map(r => {
@@ -49,7 +48,7 @@ export default async function showCancelableReservations(kakaoId, utterance, res
         return {
           label,
           action: "message",
-          messageText: r.id.toString()
+          messageText: r.id // 예약 ID를 전송함
         };
       })
     }
