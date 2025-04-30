@@ -1,5 +1,3 @@
-// ✅ handlers/member/booking/showMyReservations.mjs
-
 import { supabase } from "../../../services/supabase.mjs";
 import { replyText } from "../../../utils/reply.mjs";
 import dayjs from "dayjs";

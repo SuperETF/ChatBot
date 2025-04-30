@@ -15,11 +15,14 @@ export default async function showCancelableReservations(kakaoId, utterance, res
     return res.json(replyText("먼저 회원 등록이 필요합니다."));
   }
 
+  const now = dayjs().subtract(1, "minute").toISOString(); // ✅ 현재보다 1분 전부터 보여줌
+
   const { data: reservations } = await supabase
     .from("reservations")
     .select("id, reservation_time")
     .eq("member_id", member.id)
-    .eq("status", "reserved")
+    .eq("status", "reserved") // ✅ status 조건 확인
+    .gt("reservation_time", now) // ✅ 미래 예약만 가져옴
     .order("reservation_time", { ascending: true });
 
   if (!reservations || reservations.length === 0) {
@@ -29,7 +32,7 @@ export default async function showCancelableReservations(kakaoId, utterance, res
   cancelContext[kakaoId] = {
     flow: "cancel-waiting",
     options: reservations.reduce((acc, r) => {
-      const label = dayjs(r.reservation_time).format("YYYY-MM-DD HH:mm");
+      const label = dayjs(r.reservation_time).format("M월 D일"); // ✅ 한국형 포맷
       acc[r.id] = label;
       return acc;
     }, {})
@@ -44,11 +47,11 @@ export default async function showCancelableReservations(kakaoId, utterance, res
         }
       ],
       quickReplies: reservations.map(r => {
-        const label = dayjs(r.reservation_time).format("YYYY-MM-DD HH:mm");
+        const label = dayjs(r.reservation_time).format("M월 D일"); // ✅ 날짜 포맷
         return {
           label,
           action: "message",
-          messageText: r.id // 예약 ID를 전송함
+          messageText: r.id
         };
       })
     }
