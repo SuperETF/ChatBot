@@ -30,6 +30,14 @@ app.use(express.json());
 app.use("/kakao/webhook", memberWebhook);  // 회원용
 app.use("/kakao/admin", adminWebhook);     // 전문가용
 
+// ✅ (선택) GET 요청에 대한 안내 처리 추가
+app.get("/kakao/admin", (req, res) => {
+  res.send("✅ 관리자 웹훅은 POST 방식으로 호출해야 합니다.");
+});
+app.get("/kakao/webhook", (req, res) => {
+  res.send("✅ 회원 웹훅은 POST 방식으로 호출해야 합니다.");
+});
+
 // ✅ 404 처리
 app.use((req, res) => {
   res.status(404).json({ error: "Not Found" });
