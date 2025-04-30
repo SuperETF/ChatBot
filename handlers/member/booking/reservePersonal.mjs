@@ -82,8 +82,8 @@ export async function handleMultiTurnFlow(kakaoId, utterance, res) {
     if (/네|응|ㅇㅇ|확인/.test(utterance)) {
       const confirmedTime = dayjs(context.date);
 
-      // ✅ 예약 최종 저장
-      await supabase.from("reservations").insert({
+      // ✅ Supabase에 예약 저장
+      const { error } = await supabase.from("reservations").insert({
         kakao_id: kakaoId,
         reservation_time: confirmedTime.toISOString(),
         status: "reserved",
@@ -91,6 +91,12 @@ export async function handleMultiTurnFlow(kakaoId, utterance, res) {
       });
 
       delete sessionContext[kakaoId];
+
+      if (error) {
+        console.error("❌ 예약 저장 실패:", error.message);
+        return res.json(replyText("❌ 예약 저장 중 문제가 발생했습니다."));
+      }
+
       return res.json(replyText(`✅ ${confirmedTime.format("M월 D일 (ddd) HH시")} 예약 완료됐어요.`));
     } else {
       return res.json(replyQuickReplies("예약을 확정할까요?", ["네", "아니오"]));
