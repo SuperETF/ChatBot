@@ -16,6 +16,7 @@ export default async function adminWebhook(req, res) {
       .eq("kakao_id", kakaoId)
       .maybeSingle();
 
+    // ✅ 전문가 인증이 안 된 경우
     if (!trainer) {
       if (utterance === "전문가 등록") {
         return auth(kakaoId, utterance, res, "registerTrainerMember");
@@ -26,7 +27,7 @@ export default async function adminWebhook(req, res) {
       ]));
     }
 
-    // ✅ 발화 == 버튼 텍스트 기준으로 명확히 일치
+    // ✅ 전문가 인증된 경우 기능 분기
     if (utterance === "나의 회원 등록") {
       return auth(kakaoId, utterance, res, "registerMember");
     }
@@ -44,18 +45,37 @@ export default async function adminWebhook(req, res) {
     }
 
     if (utterance === "개인 운동 현황") {
-      return res.json(replyText("✅ [개인 운동 현황] 기능은 준비 중입니다."));
+      return res.json(replyQuickReplies("✅ [개인 운동 현황] 기능은 준비 중입니다.", [
+        { label: "메인 메뉴", messageText: "메인 메뉴" }
+      ]));
     }
 
-    // fallback
+    // ✅ fallback (기본 응답)
     return res.json(replyQuickReplies("🧭 전문가 기능입니다. 버튼을 눌러 선택해주세요:", [
       { label: "나의 회원 등록", messageText: "나의 회원 등록" },
       { label: "나의 회원 목록", messageText: "나의 회원 목록" },
       { label: "과제 생성", messageText: "과제 생성" },
       { label: "과제 현황", messageText: "과제 현황" }
     ]));
+
   } catch (err) {
     console.error("❌ adminWebhook error:", err.message);
-    return res.json(replyText("⚠️ 관리자 챗봇 처리 중 오류가 발생했습니다."));
+
+    // ✅ catch 응답도 카카오 JSON 형식으로
+    return res.json({
+      version: "2.0",
+      template: {
+        outputs: [
+          {
+            simpleText: {
+              text: "⚠️ 관리자 챗봇 처리 중 오류가 발생했습니다.\n잠시 후 다시 시도해주세요."
+            }
+          }
+        ],
+        quickReplies: [
+          { label: "메인 메뉴", messageText: "메인 메뉴" }
+        ]
+      }
+    });
   }
 }
