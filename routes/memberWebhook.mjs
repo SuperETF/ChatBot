@@ -50,7 +50,7 @@ router.post("/", async (req, res) => {
     }
 
     /** ✅ 예약 관련 */
-    if (/^개인\s*운동$/.test(utterance)) {
+    if (/^개인\s*운동(\s*예약)?$/.test(utterance)) {
       return booking(kakaoId, utterance, res, "startPersonalReservation");
     }
 
