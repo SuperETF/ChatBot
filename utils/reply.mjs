@@ -1,4 +1,3 @@
-// ✅ utils/reply.mjs
 /**
  * 단순 텍스트 응답
  */
@@ -8,9 +7,7 @@ export function replyText(text) {
     template: {
       outputs: [
         {
-          simpleText: {
-            text
-          }
+          simpleText: { text }
         }
       ]
     }
@@ -20,7 +17,7 @@ export function replyText(text) {
 /**
  * QuickReplies 응답
  * - simpleText + 여러 버튼
- * - 버튼(label/action/messageText 동일)
+ * - 문자열 또는 객체 형태 모두 지원
  */
 export function replyQuickReplies(text, quickReplies = []) {
   return {
@@ -28,23 +25,30 @@ export function replyQuickReplies(text, quickReplies = []) {
     template: {
       outputs: [
         {
-          simpleText: {
-            text
-          }
+          simpleText: { text }
         }
       ],
-      quickReplies: quickReplies.map(label => ({
-        label,
-        action: "message",
-        messageText: label
-      }))
+      quickReplies: quickReplies.map(item => {
+        if (typeof item === "string") {
+          return {
+            label: item,
+            action: "message",
+            messageText: item
+          };
+        } else {
+          return {
+            label: item.label,
+            action: item.action || "message",
+            messageText: item.messageText || item.label
+          };
+        }
+      })
     }
   };
 }
 
 /**
  * BasicCard 응답
- * - { title, description, buttons[] }
  */
 export function replyBasicCard({ title, description, buttons = [] }) {
   return {
@@ -68,8 +72,7 @@ export function replyBasicCard({ title, description, buttons = [] }) {
 }
 
 /**
- * 버튼(QuickReplies) 별칭 함수
- * - fallback 등에서 "replyButton" 이름을 쓰고 싶을 때
+ * 버튼 응답 별칭
  */
 export function replyButton(text, buttons = []) {
   return replyQuickReplies(text, buttons);
