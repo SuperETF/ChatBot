@@ -1,11 +1,14 @@
+// ✅ handlers/admin/assignment/handleAssignmentFlow.mjs
 import { supabase } from "../../../services/supabase.mjs";
 import { replyText } from "../../../utils/reply.mjs";
-import { sessionContext } from "../../../utils/sessionContext.mjs";
+import { assignmentSession } from "../../../utils/sessionContext.mjs";
 import { parseNaturalDatePeriod, parseWeekdays, getRepeatDates } from "../../../utils/parseAssignmentDates.mjs";
 import dayjs from "dayjs";
 
 export default async function handleAssignmentFlow(kakaoId, utterance, res) {
-  const ctx = sessionContext[kakaoId];
+  const ctx = assignmentSession[kakaoId];
+  if (!ctx) return res.json(replyText("❌ 과제 생성 흐름이 초기화되었습니다. 다시 '과제 생성'을 눌러주세요."));
+
   const step = ctx.step;
   const data = ctx.assignment;
 
@@ -42,21 +45,17 @@ export default async function handleAssignmentFlow(kakaoId, utterance, res) {
     return res.json(replyText("📌 어떤 과제를 부여할까요?\n예: 스쿼트 100개, 런지 20개"));
   }
 
-  // 4. 과제 내용 입력 → 저장
+  // 4. 과제 내용 입력 및 저장
   if (step === "awaiting_content") {
     data.content = utterance;
 
-    // insert into assignments
     const { data: assignment } = await supabase
       .from("assignments")
-      .insert({
-        member_id: data.member_id,
-        content: data.content
-      })
+      .insert({ member_id: data.member_id, content: data.content })
       .select()
       .single();
 
-    const weekdays = parseWeekdays(data.repeat_type); // ["월", "수"] → [1,3]
+    const weekdays = parseWeekdays(data.repeat_type);
     const repeatDates = getRepeatDates(
       dayjs(data.start_date),
       dayjs(data.end_date),
@@ -70,7 +69,9 @@ export default async function handleAssignmentFlow(kakaoId, utterance, res) {
 
     await supabase.from("assignment_schedules").insert(scheduleRows);
 
-    delete sessionContext[kakaoId];
-    return res.json(replyText("✅ 과제가 등록되었습니다!\n🗓️ 기간: " + data.start_date + " ~ " + data.end_date));
+    delete assignmentSession[kakaoId];
+    return res.json(replyText(
+      `✅ 과제가 등록되었습니다!\n🗓️ 기간: ${dayjs(data.start_date).format("M월 D일")} ~ ${dayjs(data.end_date).format("M월 D일")}\n📌 내용: ${data.content}`
+    ));
   }
 }
