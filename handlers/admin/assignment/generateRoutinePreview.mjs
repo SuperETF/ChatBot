@@ -1,8 +1,8 @@
-import { sessionContext } from "../../../utils/sessionContext.mjs";
+import { assignmentSession } from "../../../utils/sessionContext.mjs";
 import { replyText } from "../../../utils/reply.mjs";
 
 export default async function generateRoutinePreview(kakaoId, utterance, res) {
-  sessionContext[kakaoId] = {
+  assignmentSession[kakaoId] = {
     flow: "assignment",
     step: "awaiting_member",
     assignment: {}
