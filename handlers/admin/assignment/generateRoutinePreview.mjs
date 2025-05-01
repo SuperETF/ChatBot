@@ -1,4 +1,4 @@
-import { sessionContext } from "../../../services/sessionContext.js";
+import { sessionContext } from "../../../utils/sessionContext.mjs";
 import { replyText } from "../../../utils/reply.mjs";
 
 export default async function generateRoutinePreview(kakaoId, utterance, res) {

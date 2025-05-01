@@ -1,6 +1,6 @@
 import { supabase } from "../../../services/supabase.mjs";
 import { replyText } from "../../../utils/reply.mjs";
-import { sessionContext } from "../../../services/sessionContext.js";
+import { sessionContext } from "../../../utils/sessionContext.mjs";
 import { parseNaturalDatePeriod, parseWeekdays, getRepeatDates } from "../../../utils/parseAssignmentDates.mjs";
 import dayjs from "dayjs";
 
