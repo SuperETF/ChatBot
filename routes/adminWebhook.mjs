@@ -3,10 +3,9 @@ import { supabase } from "../services/supabase.mjs";
 import auth from "../handlers/admin/auth/index.mjs";
 import assignment from "../handlers/admin/assignment/index.mjs";
 import { replyText, replyQuickReplies } from "../utils/reply.mjs";
+import { assignmentSession } from "../utils/sessionContext.mjs"; // ✅ 필수 import
 
 const router = express.Router();
-
-// ✅ 모든 발화 정규화 함수
 const normalizeUtterance = (text) => text.replace(/\s+/g, " ").trim();
 
 router.post("/", async (req, res) => {
@@ -16,7 +15,6 @@ router.post("/", async (req, res) => {
 
   console.log("🧑‍💼 [관리자 발화]:", JSON.stringify(utterance));
 
-  // ✅ block 이동용 발화는 서버 무시
   const blockOnly = ["멤버 등록", "예약 관리", "숙제 및 과제"];
   if (blockOnly.includes(utterance)) {
     console.log(`🟨 '${utterance}' → block 이동용 → 서버 무시`);
@@ -24,7 +22,6 @@ router.post("/", async (req, res) => {
   }
 
   try {
-    /** ✅ 전문가 등록 안내 */
     if (utterance === "전문가 등록") {
       console.log("✅ 전문가 등록 조건 진입 성공");
       return res.json(replyQuickReplies(
@@ -33,12 +30,10 @@ router.post("/", async (req, res) => {
       ));
     }
 
-    /** ✅ 전문가 인증 입력 */
     if (/^전문가\s+[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/.test(utterance)) {
       return auth(kakaoId, utterance, res, "registerTrainerMember");
     }
 
-    /** ✅ 나의 회원 등록 안내 */
     if (utterance === "나의 회원 등록") {
       return res.json(replyQuickReplies(
         "📝 회원 등록을 위해 아래와 같이 입력해주세요:\n\n예: 회원 김영희 01012345678 1234",
@@ -46,33 +41,28 @@ router.post("/", async (req, res) => {
       ));
     }
 
-    /** ✅ 회원 등록 실제 처리 */
     if (/^회원\s+[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}/.test(utterance)) {
       return auth(kakaoId, utterance, res, "registerMember");
     }
 
-    /** ✅ 나의 회원 목록 */
     if (/^나의\s*회원\s*(목록|현황)$/.test(utterance)) {
       return auth(kakaoId, utterance, res, "listMembers");
     }
 
-    // 🔁 과제 생성 진입
-if (utterance === "과제 생성") {
-  return assignment(kakaoId, utterance, res, "generateRoutinePreview");
-}
+    // ✅ 과제 생성 진입
+    if (utterance === "과제 생성") {
+      return assignment(kakaoId, utterance, res, "generateRoutinePreview");
+    }
 
-// 🔁 멀티턴 흐름 진행 중일 때 분기
-if (sessionContext[kakaoId]?.flow === "assignment") {
-  return assignment(kakaoId, utterance, res, "handleAssignmentFlow");
-}
+    // ✅ 멀티턴 과제 흐름 중인 경우
+    if (assignmentSession[kakaoId]?.flow === "assignment") {
+      return assignment(kakaoId, utterance, res, "handleAssignmentFlow");
+    }
 
-
-    /** ✅ 과제 현황 */
     if (/^과제\s*현황$/.test(utterance)) {
       return assignment(kakaoId, utterance, res, "getAssignmentStatus");
     }
 
-    /** ✅ 메인 메뉴 */
     if (/메인\s*메뉴/.test(utterance)) {
       return res.json(replyQuickReplies("🧭 메인 메뉴입니다.", [
         "나의 회원 등록",
@@ -82,7 +72,6 @@ if (sessionContext[kakaoId]?.flow === "assignment") {
       ]));
     }
 
-    /** ✅ fallback 처리 */
     await supabase.from("fallback_logs").insert({
       kakao_id: kakaoId,
       utterance,
@@ -93,7 +82,7 @@ if (sessionContext[kakaoId]?.flow === "assignment") {
     });
 
     return res.json(replyQuickReplies("❓ 요청을 이해하지 못했어요. 아래 버튼을 선택해주세요.", [
-      "메인 메뉴",
+      "메인 메뉴"
     ]));
   } catch (err) {
     console.error("💥 admin webhook error:", err.message);
