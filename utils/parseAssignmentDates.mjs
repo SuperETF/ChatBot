@@ -2,8 +2,6 @@
 import dayjs from "dayjs";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore.js";
 dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
-dayjs.extend(customParseFormat);
 
 export function parseNaturalDatePeriod(input) {
   const now = dayjs();
