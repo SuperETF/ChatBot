@@ -1,61 +1,33 @@
-// ✅ routes/entryWebhook.mjs
-
 import express from "express";
-import { supabase } from "../services/supabase.mjs";
+import registerTrainer from "../handlers/entry/registerTrainer.mjs";
+import registerMember from "../handlers/entry/registerMember.mjs";
+import routeToRoleMenu from "../handlers/entry/routeToRoleMenu.mjs";
 
 const router = express.Router();
-
-// 블럭 ID 정의 (오픈빌더에서 복사한 실제 값)
-const BLOCK_IDS = {
-  WELCOME: "68133c2647b70d2c1d62b4d1",        // 비회원: 회원/전문가 선택 블럭
-  MEMBER_MAIN: "67e66dfba6c9712a60fb0f93",    // 등록된 회원 메인 메뉴
-  TRAINER_MAIN: "68133a8b2c50e1482b18ddfd"    // 등록된 전문가 메인 메뉴
-};
 
 router.post("/", async (req, res) => {
   const utterance = (req.body.userRequest?.utterance || "").trim();
   const kakaoId = req.body.userRequest?.user?.id;
 
-  // ✅ "등록" 아닌 발화는 무시 (보안/혼동 방지)
-  if (utterance !== "등록") {
-    return res.json({
-      version: "2.0",
-      text: "‘등록’이라고 입력하시면 시작됩니다."
-    });
+  if (/^전문가\s+[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/.test(utterance)) {
+    return registerTrainer(kakaoId, utterance, res);
   }
 
-  // ✅ 전문가 여부 확인
-  const { data: trainer } = await supabase
-    .from("trainers")
-    .select("id")
-    .eq("kakao_id", kakaoId)
-    .maybeSingle();
-
-  if (trainer) {
-    return res.json({
-      version: "2.0",
-      redirectBlock: BLOCK_IDS.TRAINER_MAIN
-    });
+  if (/^회원\s+[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/.test(utterance)) {
+    return registerMember(kakaoId, utterance, res);
   }
 
-  // ✅ 회원 여부 확인
-  const { data: member } = await supabase
-    .from("members")
-    .select("id")
-    .eq("kakao_id", kakaoId)
-    .maybeSingle();
-
-  if (member) {
-    return res.json({
-      version: "2.0",
-      redirectBlock: BLOCK_IDS.MEMBER_MAIN
-    });
+  if (utterance === "메뉴") {
+    return routeToRoleMenu(kakaoId, res);
   }
 
-  // ✅ 둘 다 아니면 웰컴 블럭
   return res.json({
     version: "2.0",
-    redirectBlock: BLOCK_IDS.WELCOME
+    template: {
+      outputs: [{
+        simpleText: { text: "‘회원 홍길동 01012345678 1234’ 또는 ‘전문가 김복두 01012345678 0412’ 형식으로 등록해 주세요." }
+      }]
+    }
   });
 });
 
