@@ -1,3 +1,4 @@
+// ✅ handlers/member/assignment/getUpcomingAssignments.mjs
 import { supabase } from "../../../services/supabase.mjs";
 import { replyText } from "../../../utils/reply.mjs";
 
@@ -17,18 +18,18 @@ export default async function getUpcomingAssignments(kakaoId, res) {
 
   // ✅ 2. 해당 회원의 모든 과제 ID 확인
   const { data: assignments } = await supabase
-    .from("personal_assignments")
-    .select("id, title")
+    .from("assignments")
+    .select("id, content")
     .eq("member_id", member.id);
 
   if (!assignments || assignments.length === 0) {
     return res.json(replyText("📭 아직 등록된 과제가 없습니다."));
   }
 
-  const assignmentMap = new Map(assignments.map(a => [a.id, a.title]));
+  const assignmentMap = new Map(assignments.map(a => [a.id, a.content]));
   const assignmentIds = Array.from(assignmentMap.keys());
 
-  // ✅ 3. 그 중에서 오늘 이후의 스케줄만 조회
+  // ✅ 3. 오늘 이후의 스케줄만 조회
   const { data: schedules } = await supabase
     .from("assignment_schedules")
     .select("assignment_id, target_date, target_time")
@@ -43,9 +44,9 @@ export default async function getUpcomingAssignments(kakaoId, res) {
 
   // ✅ 4. 출력
   const message = schedules.map(s => {
-    const title = assignmentMap.get(s.assignment_id) || "제목 없음";
+    const content = assignmentMap.get(s.assignment_id) || "내용 없음";
     const time = s.target_time ? ` ${s.target_time}` : "";
-    return `• ${s.target_date}${time} - ${title}`;
+    return `• ${s.target_date}${time} - ${content}`;
   }).join("\n");
 
   return res.json(replyText(`📌 ${member.name}님의 예정된 과제:\n\n${message}`));

@@ -80,7 +80,11 @@ if (
     if (/^예정된\s*과제$/.test(utterance)) {
       return assignment(kakaoId, utterance, res, "getUpcomingAssignments");
     }
-
+    
+    if (utterance === "오늘 과제 완료") {
+      return assignment(kakaoId, utterance, res, "completeTodayAssignments");
+    }
+    
     /** ✅ 메인 메뉴 */
     if (/메인\s*메뉴/i.test(utterance)) {
       delete sessionContext[kakaoId];
