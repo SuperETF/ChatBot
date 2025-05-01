@@ -10,50 +10,52 @@ router.post("/", async (req, res) => {
   const utterance = (req.body.userRequest?.utterance || "").trim();
   const kakaoId = req.body.userRequest?.user?.id;
 
-  console.log("🧑‍💼 [관리자 발화]:", utterance);
+  const normalized = utterance.replace(/\s+/g, " ").trim();
+  console.log("🧑‍💼 [관리자 발화]:", JSON.stringify(normalized));
 
-  // ✅ "멤버 등록"은 오픈빌더 block 이동용 → 서버에서 무시
-  if (utterance === "멤버 등록") {
+  if (normalized === "멤버 등록") {
     console.log("🟨 '멤버 등록' 발화는 block 이동용이므로 서버에서 무시합니다.");
     return res.status(200).end();
   }
 
   try {
     /** ✅ 전문가 등록 안내 */
-    const normalized = utterance.replace(/\s+/g, " ").trim();
-if (normalized === "전문가 등록") {
-  return res.json(replyQuickReplies(
-    "전문가 등록을 위해 아래와 같이 입력해주세요:\n\n예: 전문가 홍길동 01012345678 0412",
-    [{ label: "메인 메뉴", action: "message", messageText: "메인 메뉴" }]
-  ));
-}
+    if (normalized === "전문가 등록") {
+      console.log("✅ 전문가 등록 조건 진입 성공");
+      return res.json(replyQuickReplies(
+        "전문가 등록을 위해 아래와 같이 입력해주세요:\n\n예: 전문가 홍길동 01012345678 0412",
+        [{ label: "메인 메뉴", action: "message", messageText: "메인 메뉴" }]
+      ));
+    }
+
     /** ✅ 전문가 인증 요청 */
-    if (/^전문가\s+[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/.test(utterance)) {
-      return auth(kakaoId, utterance, res, "registerTrainerMember");
+    if (/^전문가\s+[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/.test(normalized)) {
+      console.log("✅ 전문가 인증 입력 조건 진입");
+      return auth(kakaoId, normalized, res, "registerTrainerMember");
     }
 
     /** ✅ 나의 회원 등록 */
-    if (/^나의\s*회원\s*등록$/.test(utterance)) {
-      return auth(kakaoId, utterance, res, "registerMember");
+    if (/^나의\s*회원\s*등록$/.test(normalized)) {
+      return auth(kakaoId, normalized, res, "registerMember");
     }
 
     /** ✅ 나의 회원 목록 */
-    if (/^나의\s*회원\s*목록$/.test(utterance)) {
-      return auth(kakaoId, utterance, res, "listMembers");
+    if (/^나의\s*회원\s*(목록|현황)$/.test(normalized)) {
+      return auth(kakaoId, normalized, res, "listMembers");
     }
 
     /** ✅ 과제 생성 */
-    if (/^과제\s*생성$/.test(utterance)) {
-      return assignment(kakaoId, utterance, res, "generateRoutinePreview");
+    if (/^과제\s*생성$/.test(normalized)) {
+      return assignment(kakaoId, normalized, res, "generateRoutinePreview");
     }
 
     /** ✅ 과제 현황 */
-    if (/^과제\s*현황$/.test(utterance)) {
-      return assignment(kakaoId, utterance, res, "getAssignmentStatus");
+    if (/^과제\s*현황$/.test(normalized)) {
+      return assignment(kakaoId, normalized, res, "getAssignmentStatus");
     }
 
     /** ✅ 메인 메뉴 */
-    if (/메인\s*메뉴/.test(utterance)) {
+    if (/메인\s*메뉴/.test(normalized)) {
       return res.json(replyQuickReplies(
         "🧭 메인 메뉴입니다.\n- 나의 회원 등록\n- 나의 회원 목록\n- 과제 생성\n- 과제 현황",
         [
