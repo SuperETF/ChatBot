@@ -56,10 +56,16 @@ router.post("/", async (req, res) => {
       return auth(kakaoId, utterance, res, "listMembers");
     }
 
-    /** ✅ 과제 생성 */
-    if (/^과제\s*생성$/.test(utterance)) {
-      return assignment(kakaoId, utterance, res, "generateRoutinePreview");
-    }
+    // 🔁 과제 생성 진입
+if (utterance === "과제 생성") {
+  return assignment(kakaoId, utterance, res, "generateRoutinePreview");
+}
+
+// 🔁 멀티턴 흐름 진행 중일 때 분기
+if (sessionContext[kakaoId]?.flow === "assignment") {
+  return assignment(kakaoId, utterance, res, "handleAssignmentFlow");
+}
+
 
     /** ✅ 과제 현황 */
     if (/^과제\s*현황$/.test(utterance)) {
@@ -88,7 +94,6 @@ router.post("/", async (req, res) => {
 
     return res.json(replyQuickReplies("❓ 요청을 이해하지 못했어요. 아래 버튼을 선택해주세요.", [
       "메인 메뉴",
-      "나의 회원 등록"
     ]));
   } catch (err) {
     console.error("💥 admin webhook error:", err.message);
