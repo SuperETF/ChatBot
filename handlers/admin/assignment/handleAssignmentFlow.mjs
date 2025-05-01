@@ -64,12 +64,26 @@ export default async function handleAssignmentFlow(kakaoId, utterance, res) {
       weekdays.length > 0 ? weekdays : data.repeat_type
     );
 
+    console.log("🗓 생성된 날짜 목록:", repeatDates);
+
+    if (!repeatDates.length) {
+      console.warn("❌ 반복 날짜 생성 실패 → repeatDates is empty");
+      return res.json(replyText("❗ 과제 날짜 생성에 실패했습니다. 입력을 다시 확인해주세요."));
+    }
+
     const scheduleRows = repeatDates.map(date => ({
       assignment_id: assignment.id,
       target_date: date
     }));
 
-    await supabase.from("assignment_schedules").insert(scheduleRows);
+    const { error: insertError } = await supabase
+      .from("assignment_schedules")
+      .insert(scheduleRows);
+
+    if (insertError) {
+      console.error("❌ 과제 스케줄 저장 실패:", insertError.message);
+      return res.json(replyText("❗ 과제 스케줄 저장 중 오류가 발생했습니다."));
+    }
 
     delete assignmentSession[kakaoId];
     return res.json(replyQuickReplies(
