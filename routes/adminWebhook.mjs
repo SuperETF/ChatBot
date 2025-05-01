@@ -20,13 +20,13 @@ router.post("/", async (req, res) => {
 
   try {
     /** ✅ 전문가 등록 안내 */
-    if (/^전문가\s*등록$/.test(utterance)) {
-      return res.json(replyQuickReplies(
-        "전문가 등록을 위해 아래와 같이 입력해주세요:\n\n예: 전문가 홍길동 01012345678 0412",
-        [{ label: "메인 메뉴", action: "message", messageText: "메인 메뉴" }]
-      ));
-    }
-
+    const normalized = utterance.replace(/\s+/g, " ").trim();
+if (normalized === "전문가 등록") {
+  return res.json(replyQuickReplies(
+    "전문가 등록을 위해 아래와 같이 입력해주세요:\n\n예: 전문가 홍길동 01012345678 0412",
+    [{ label: "메인 메뉴", action: "message", messageText: "메인 메뉴" }]
+  ));
+}
     /** ✅ 전문가 인증 요청 */
     if (/^전문가\s+[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/.test(utterance)) {
       return auth(kakaoId, utterance, res, "registerTrainerMember");
