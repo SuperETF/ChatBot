@@ -1,6 +1,6 @@
 // ✅ handlers/admin/assignment/handleAssignmentFlow.mjs
 import { supabase } from "../../../services/supabase.mjs";
-import { replyText } from "../../../utils/reply.mjs";
+import { replyText, replyQuickReplies } from "../../../utils/reply.mjs";
 import { assignmentSession } from "../../../utils/sessionContext.mjs";
 import { parseNaturalDatePeriod, parseWeekdays, getRepeatDates } from "../../../utils/parseAssignmentDates.mjs";
 import dayjs from "dayjs";
@@ -23,29 +23,31 @@ export default async function handleAssignmentFlow(kakaoId, utterance, res) {
     if (!member) return res.json(replyText("❌ 해당 회원을 찾을 수 없습니다. 다시 입력해주세요."));
 
     data.member_id = member.id;
-    ctx.step = "awaiting_period";
-    return res.json(replyText("📅 과제를 언제부터 언제까지 부여할까요?\n예: 5월 10일부터 5일, 내일부터 3일간"));
+    ctx.step = "awaiting_period_and_frequency";
+
+    return res.json(replyQuickReplies("📅 과제 기간과 반복 주기를 선택해주세요:", [
+      { label: "이번 주 월~금 (매일)", messageText: "이번 주 월~금 매일" },
+      { label: "이번 주 월/수/금", messageText: "이번 주 월/수/금" },
+      { label: "내일부터 3일간", messageText: "내일부터 3일간" },
+      { label: "다음 주 5일간", messageText: "다음 주 5일간" },
+      { label: "수요일 하루만", messageText: "수요일 하루만" }
+    ]));
   }
 
-  // 2. 기간 입력
-  if (step === "awaiting_period") {
+  // 2. 날짜 + 반복 주기 통합 입력
+  if (step === "awaiting_period_and_frequency") {
     const parsed = parseNaturalDatePeriod(utterance);
-    if (!parsed) return res.json(replyText("❗ 날짜를 인식하지 못했어요. 다시 입력해주세요."));
+    if (!parsed) return res.json(replyText("❗ 날짜와 주기를 인식하지 못했어요. 다시 선택하거나 입력해주세요."));
 
     data.start_date = parsed.start;
     data.end_date = parsed.end;
-    ctx.step = "awaiting_frequency";
-    return res.json(replyText("🔁 반복 주기를 알려주세요.\n예: 매일, 격일, 월수금"));
-  }
+    data.repeat_type = parsed.repeat_type || "매일";
 
-  // 3. 반복 주기 입력
-  if (step === "awaiting_frequency") {
-    data.repeat_type = utterance;
     ctx.step = "awaiting_content";
     return res.json(replyText("📌 어떤 과제를 부여할까요?\n예: 스쿼트 100개, 런지 20개"));
   }
 
-  // 4. 과제 내용 입력 및 저장
+  // 3. 과제 내용 입력 및 저장
   if (step === "awaiting_content") {
     data.content = utterance;
 
@@ -70,8 +72,9 @@ export default async function handleAssignmentFlow(kakaoId, utterance, res) {
     await supabase.from("assignment_schedules").insert(scheduleRows);
 
     delete assignmentSession[kakaoId];
-    return res.json(replyText(
-      `✅ 과제가 등록되었습니다!\n🗓️ 기간: ${dayjs(data.start_date).format("M월 D일")} ~ ${dayjs(data.end_date).format("M월 D일")}\n📌 내용: ${data.content}`
+    return res.json(replyQuickReplies(
+      `✅ 과제가 등록되었습니다!\n🗓️ ${dayjs(data.start_date).format("M월 D일")} ~ ${dayjs(data.end_date).format("M월 D일")}\n📌 ${data.content}`,
+      ["과제 다시 생성", "메인 메뉴"]
     ));
   }
 }
