@@ -9,7 +9,14 @@ const router = express.Router();
 router.post("/", async (req, res) => {
   const utterance = (req.body.userRequest?.utterance || "").trim();
   const kakaoId = req.body.userRequest?.user?.id;
+
   console.log("🧑‍💼 [관리자 발화]:", utterance);
+
+  // ✅ "멤버 등록"은 오픈빌더 block 이동용 → 서버에서 무시
+  if (utterance === "멤버 등록") {
+    console.log("🟨 '멤버 등록' 발화는 block 이동용이므로 서버에서 무시합니다.");
+    return res.status(200).end();
+  }
 
   try {
     /** ✅ 전문가 등록 안내 */
