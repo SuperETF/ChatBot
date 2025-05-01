@@ -7,9 +7,9 @@ const router = express.Router();
 
 // 블럭 ID 정의 (오픈빌더에서 복사한 실제 값)
 const BLOCK_IDS = {
-  WELCOME: "68133a3223dc6c3328128cd3",        // 비회원: 회원/전문가 선택 블럭
-  MEMBER_MAIN: "67e66dddabcdb40ec9fbddad",    // 등록된 회원 메인 메뉴
-  TRAINER_MAIN: "680b09d42c50e1482b17d9ea"    // 등록된 전문가 메인 메뉴
+  WELCOME: "68133c2647b70d2c1d62b4d1",        // 비회원: 회원/전문가 선택 블럭
+  MEMBER_MAIN: "67e66dfba6c9712a60fb0f93",    // 등록된 회원 메인 메뉴
+  TRAINER_MAIN: "68133a8b2c50e1482b18ddfd"    // 등록된 전문가 메인 메뉴
 };
 
 router.post("/", async (req, res) => {
