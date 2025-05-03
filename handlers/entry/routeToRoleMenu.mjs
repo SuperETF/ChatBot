@@ -2,6 +2,13 @@ import { supabase } from "../../services/supabase.mjs";
 import adminWebhook from "../admin/index.mjs";
 import memberWebhook from "../member/index.mjs";
 
+// ✅ 블럭 ID 직접 하드코딩 (초기 진입 전용이므로 이 위치가 적절)
+const BLOCK_IDS = {
+  WELCOME: "68133a3223dc6c3328128cd3",
+  MEMBER_MAIN: "67e66dddabcdb40ec9fbddad",
+  TRAINER_MAIN: "680b09d42c50e1482b17d9ea"
+};
+
 export default async function routeToRoleMenu(kakaoId, res) {
   const { data: trainer } = await supabase
     .from("trainers")
