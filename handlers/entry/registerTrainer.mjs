@@ -3,14 +3,21 @@ import { replyText } from "../../utils/reply.mjs";
 
 export default async function registerTrainer(kakaoId, utterance, res) {
   try {
-    const match = utterance.match(/^전문가\s+([가-힣]{2,10})\s+(01[016789]\d{7,8})\s+(\d{4})$/);
+    // 🔍 입력 형식 유연화: 하이픈 유무 허용, 010으로 시작하는 번호, 3~4자리 중간번호 허용
+    const match = utterance.match(
+      /^전문가\s+([가-힣]{2,10})\s+01[016789][-]?\d{3,4}[-]?\d{4}\s+(\d{4})$/
+    );
+
     if (!match) {
       return res.json(replyText(
         "❗ 입력 형식이 올바르지 않습니다.\n\n예: 전문가 홍길동 01012345678 0412"
       ));
     }
 
-    const [_, name, phone, inputCode] = match;
+    const [_, name, phoneRaw, inputCode] = match;
+
+    // 🔧 하이픈 제거
+    const phone = phoneRaw.replace(/-/g, "");
 
     // 🔍 DB에서 트레이너 정보 조회
     const { data: trainer, error: fetchError } = await supabase
@@ -52,7 +59,9 @@ export default async function registerTrainer(kakaoId, utterance, res) {
       return res.json(replyText("❗ 인증 처리 중 오류가 발생했습니다. 다시 시도해 주세요."));
     }
 
-    return res.json(replyText(`✅ ${name} 트레이너님, 인증이 완료되었습니다.\n'메뉴'라고 입력해서 시작해 보세요.`));
+    return res.json(replyText(
+      `✅ ${name} 트레이너님, 인증이 완료되었습니다.\n'메뉴'라고 입력해서 시작해 보세요.`
+    ));
   } catch (err) {
     console.error("💥 [registerTrainer] 예외 발생:", err.message);
     return res.json(replyText("⚠️ 알 수 없는 오류가 발생했습니다. 다시 시도해 주세요."));

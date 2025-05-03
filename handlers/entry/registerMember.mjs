@@ -3,14 +3,19 @@ import { replyText } from "../../utils/reply.mjs";
 
 export default async function registerMember(kakaoId, utterance, res) {
   try {
-    const match = utterance.match(/^회원\s+([가-힣]{2,10})\s+(01[016789]\d{7,8})\s+(\d{4})$/);
+    // ✅ 하이픈 포함/미포함 전화번호 허용
+    const match = utterance.match(
+      /^회원\s+([가-힣]{2,10})\s+01[016789][-]?\d{3,4}[-]?\d{4}\s+(\d{4})$/
+    );
+
     if (!match) {
       return res.json(replyText(
         "❗ 입력 형식이 올바르지 않습니다.\n\n예: 회원 김철수 01012345678 1234"
       ));
     }
 
-    const [_, name, phone, inputCode] = match;
+    const [_, name, phoneRaw, inputCode] = match;
+    const phone = phoneRaw.replace(/-/g, "");
 
     // 🔍 DB에서 회원 조회
     const { data: member, error: fetchError } = await supabase
@@ -52,7 +57,9 @@ export default async function registerMember(kakaoId, utterance, res) {
       return res.json(replyText("❗ 등록 중 오류가 발생했습니다. 다시 시도해 주세요."));
     }
 
-    return res.json(replyText(`✅ ${name} 회원님, 등록이 완료되었습니다.\n'메뉴'라고 입력해서 시작해 보세요.`));
+    return res.json(replyText(
+      `✅ ${name} 회원님, 등록이 완료되었습니다.\n'메뉴'라고 입력해서 시작해 보세요.`
+    ));
   } catch (err) {
     console.error("💥 [registerMember] 예외 발생:", err.message);
     return res.json(replyText("⚠️ 알 수 없는 오류가 발생했습니다. 다시 시도해 주세요."));
