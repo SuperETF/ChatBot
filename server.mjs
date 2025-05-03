@@ -21,7 +21,7 @@ import cors from "cors";
 // ✅ 웹훅 라우터 import
 import memberWebhook from "./routes/memberWebhook.mjs";
 import adminWebhook from "./routes/adminWebhook.mjs";
-import entryRouter from "./routes/entryWebhook.mjs"; // ✅ 추가
+import entryRouter from "./routes/entryWebhook.mjs"; // ✅ entry 라우터
 
 const app = express();
 app.use(cors());
@@ -29,10 +29,10 @@ app.use(express.json());
 
 // ✅ 라우터 연결 (POST 요청 전용)
 app.use("/kakao/webhook", memberWebhook);  // 회원용
-app.use("/kakao/admin", adminWebhook);     // 관리자용
-app.use("/kakao/entry", entryRouter);      // ✅ 등록 발화 진입용
+app.use("/kakao/admin", adminWebhook);     // 전문가용
+app.use("/kakao/entry", entryRouter);      // ✅ 등록/메뉴 처리용
 
-// ✅ 오픈빌더 '웹훅 테스트' (GET) 대응용 - JSON 스킬 응답 포맷 반환
+// ✅ 오픈빌더 '웹훅 테스트' (GET) 대응용 - JSON 응답
 app.get("/kakao/admin", (req, res) => {
   res.json({
     version: "2.0",
@@ -70,7 +70,7 @@ app.get("/kakao/entry", (req, res) => {
       outputs: [
         {
           simpleText: {
-            text: "✅ 등록 웹훅 정상 연결됨.\n(POST 요청 시 역할 분기 기능이 작동합니다.)"
+            text: "✅ entry 웹훅 정상 연결됨.\n(POST 요청 시 회원/전문가 등록 및 메뉴 라우팅이 작동합니다.)"
           }
         }
       ]
