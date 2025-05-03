@@ -11,22 +11,22 @@ router.post("/", async (req, res) => {
 
   console.log("📩 [ENTRY] POST 요청 수신:", utterance);
 
-  // 1. 전문가 등록 입력 형식 (자동 등록)
+  // ✅ 1. 전문가 등록 입력 형식 (예: 전문가 홍길동 01012345678 0412)
   if (/^전문가\s+[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/.test(utterance)) {
     return registerTrainer(kakaoId, utterance, res);
   }
 
-  // 2. 회원 등록 입력 형식 (자동 등록)
+  // ✅ 2. 회원 등록 입력 형식 (예: 회원 김철수 01012345678 1234)
   if (/^회원\s+[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/.test(utterance)) {
     return registerMember(kakaoId, utterance, res);
   }
 
-  // 3. 메뉴 발화 → 역할 기반 라우팅
-  if (utterance === "메뉴") {
+  // ✅ 3. 메뉴 진입 (역할 분기)
+  if (["메뉴", "메인 메뉴", "홈"].includes(utterance)) {
     return routeToRoleMenu(kakaoId, res);
   }
 
-  // 4. 안내용 발화
+  // ✅ 4. 안내 메시지 ("회원 등록")
   if (utterance === "회원 등록") {
     return res.json({
       version: "2.0",
@@ -40,6 +40,7 @@ router.post("/", async (req, res) => {
     });
   }
 
+  // ✅ 5. 안내 메시지 ("전문가 등록")
   if (utterance === "전문가 등록") {
     return res.json({
       version: "2.0",
@@ -53,7 +54,7 @@ router.post("/", async (req, res) => {
     });
   }
 
-  // 5. fallback (형식 안내)
+  // ✅ 6. fallback
   return res.json({
     version: "2.0",
     template: {
