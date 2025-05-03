@@ -9,6 +9,8 @@ router.post("/", async (req, res) => {
   const utterance = (req.body.userRequest?.utterance || "").trim();
   const kakaoId = req.body.userRequest?.user?.id;
 
+  console.log("📩 [ENTRY] POST 요청 수신");
+
   if (/^전문가\s+[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/.test(utterance)) {
     return registerTrainer(kakaoId, utterance, res);
   }
