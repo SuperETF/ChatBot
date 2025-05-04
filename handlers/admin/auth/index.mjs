@@ -1,6 +1,6 @@
 import { replyText } from "../../../utils/reply.mjs";
 import registerTrainer from "./registerTrainer.mjs";
-import registerMember from "./registerMember.mjs";
+import registerMember from "./registerMemberByTrainer.mjs";
 import listMembers from "./listMembers.mjs";
 
 export default async function auth(kakaoId, utterance, res, action) {

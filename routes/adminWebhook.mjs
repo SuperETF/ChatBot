@@ -37,10 +37,10 @@ router.post("/", async (req, res) => {
       ));
     }
 
-    if (/^회원\s+[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}/.test(utterance)) {
-      return auth(kakaoId, utterance, res, "registerMember");
+    if (/^회원\s+[가-힣]{2,10}\s+01[016789][-]?\d{3,4}[-]?\d{4}\s+\d{4}$/.test(utterance)) {
+      return auth(kakaoId, utterance, res, "registerMemberByTrainer");
     }
-
+    
     if (/^나의\s*회원\s*(목록|현황)$/.test(utterance)) {
       return auth(kakaoId, utterance, res, "listMembers");
     }

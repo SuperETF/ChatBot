@@ -1,6 +1,6 @@
 import express from "express";
 import registerTrainer from "../handlers/entry/registerTrainer.mjs";
-import registerMember from "../handlers/entry/registerMember.mjs";
+import registerMember from "../handlers/entry/registerMemberBySelf.mjs";
 import routeToRoleMenu from "../handlers/entry/routeToRoleMenu.mjs";
 
 const router = express.Router();
@@ -17,10 +17,10 @@ router.post("/", async (req, res) => {
   }
   
   // ✅ 2. 회원 등록 입력 형식
-  if (/^회원\s+[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/.test(utterance)) {
-    return registerMember(kakaoId, utterance, res);
+  if (/^회원\s+[가-힣]{2,10}\s+01[016789][-]?\d{3,4}[-]?\d{4}\s+\d{4}$/.test(utterance)) {
+    return registerMemberBySelf(kakaoId, utterance, res);
   }
-
+  
   // ✅ 3. 메뉴 진입 (역할 분기) - "등록" 포함
   if (["메뉴", "메인 메뉴", "홈", "등록"].includes(utterance)) {
     return routeToRoleMenu(kakaoId, res);
