@@ -3,9 +3,9 @@ import { replyText } from "../../utils/reply.mjs";
 
 export default async function registerTrainer(kakaoId, utterance, res) {
   try {
-    // 🔍 입력 형식 유연화: 하이픈 유무 허용, 010으로 시작하는 번호, 3~4자리 중간번호 허용
+    // ✅ 정규식: 하이픈 유무 허용, 010으로 시작하는 번호, 3~4자리 중간번호, 인증번호 4자리
     const match = utterance.match(
-      /^전문가\s+([가-힣]{2,10})\s+01[016789][-]?\d{3,4}[-]?\d{4}\s+(\d{4})$/
+      /^전문가\s+([가-힣]{2,10})\s+(01[016789][-]?\d{3,4}[-]?\d{4})\s+(\d{4})$/
     );
 
     if (!match) {
@@ -14,12 +14,12 @@ export default async function registerTrainer(kakaoId, utterance, res) {
       ));
     }
 
-    const [_, name, phoneRaw, inputCode] = match;
+    const name = match[1];
+    const rawPhone = match[2];
+    const inputCode = match[3];
+    const phone = rawPhone.replace(/-/g, "");
 
-    // 🔧 하이픈 제거
-    const phone = phoneRaw.replace(/-/g, "");
-
-    // 🔍 DB에서 트레이너 정보 조회
+    // ✅ Supabase에서 트레이너 정보 조회
     const { data: trainer, error: fetchError } = await supabase
       .from("trainers")
       .select("id, kakao_id, code")
