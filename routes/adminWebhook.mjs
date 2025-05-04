@@ -30,10 +30,6 @@ router.post("/", async (req, res) => {
       ));
     }
 
-    if (/^전문가\s+[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/.test(utterance)) {
-      return auth(kakaoId, utterance, res, "registerTrainerMember");
-    }
-
     if (utterance === "나의 회원 등록") {
       return res.json(replyQuickReplies(
         "📝 회원 등록을 위해 아래와 같이 입력해주세요:\n\n예: 회원 김영희 01012345678 1234",
