@@ -1,6 +1,6 @@
 import express from "express";
 import registerTrainer from "../handlers/entry/registerTrainer.mjs";
-import registerMember from "../handlers/entry/registerMemberBySelf.mjs";
+import registerMemberBySelf from "../handlers/entry/registerMemberBySelf.mjs";
 import routeToRoleMenu from "../handlers/entry/routeToRoleMenu.mjs";
 
 const router = express.Router();
