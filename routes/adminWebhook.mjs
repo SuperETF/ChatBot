@@ -39,9 +39,10 @@ router.post("/", async (req, res) => {
     }
 
     // ✅ 전문가용 회원 등록: "나의 회원 홍길동 010... 1234"
-    if (/^나의?\s*회원\s+[가-힣]{2,10}\s+01[016789][-]?\d{3,4}[-]?\d{4}\s+\d{4}$/.test(utterance)) {
+    if (/^나의\s*회원\s+[가-힣]{2,10}/.test(utterance)) {
       return auth(kakaoId, utterance, res, "registerMemberByTrainer");
     }
+    
 
     // ✅ 목록 보기
     if (/^나의\s*회원\s*(목록|현황)$/.test(utterance)) {
