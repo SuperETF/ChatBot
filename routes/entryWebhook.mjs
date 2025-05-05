@@ -1,6 +1,8 @@
 // 📁 routes/entryWebhook.mjs
 import express from "express";
 import { supabase } from "../services/supabase.mjs";
+import registerTrainer from "../handlers/entry/registerTrainer.mjs";
+import registerMemberBySelf from "../handlers/entry/registerMemberBySelf.mjs";
 
 const router = express.Router();
 
@@ -125,6 +127,16 @@ router.post("/", async (req, res) => {
         ]
       }
     });
+  }
+
+  // ✅ 전문가 등록 처리
+  if (/^전문가\s+[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/.test(utterance)) {
+    return registerTrainer(kakaoId, utterance, res);
+  }
+
+  // ✅ 회원 등록 처리
+  if (/^[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/.test(utterance)) {
+    return registerMemberBySelf(kakaoId, utterance, res);
   }
 
   // fallback
