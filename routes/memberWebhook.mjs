@@ -6,7 +6,7 @@ import getTodayAssignment from "../handlers/member/assignment/getTodayAssignment
 import completeTodayAssignments from "../handlers/member/assignment/completeTodayAssignments.mjs";
 import getAssignmentStatus from "../handlers/member/assignment/getAssignmentStatus.mjs";
 import startAssignmentSchedule from "../handlers/member/assignment/startAssignmentSchedule.mjs";
-import completeAssignmentSchedule from "../handlers/member/assignment/startAssignment.mjs";
+import completeAssignmentSchedule from "../handlers/member/assignment/completeAssignmentSchedule.mjs";
 import auth from "../handlers/member/auth/index.mjs";
 import booking, { sessionContext } from "../handlers/member/booking/index.mjs";
 import { cancelContext } from "../handlers/member/booking/showCancelableReservations.mjs";
