@@ -3,7 +3,7 @@ import { supabase } from "../services/supabase.mjs";
 import auth from "../handlers/admin/auth/index.mjs";
 import assignment from "../handlers/admin/assignment/index.mjs";
 import { replyText, replyQuickReplies } from "../utils/reply.mjs";
-import { assignmentSession } from "../utils/sessionContext.mjs";
+import { assignmentSession, adminSession } from "../utils/sessionContext.mjs";
 
 const router = express.Router();
 const normalizeUtterance = (text) => text.replace(/\s+/g, " ").trim();
@@ -23,6 +23,12 @@ router.post("/", async (req, res) => {
   }
 
   try {
+    // ✅ 멀티턴 흐름 중인 경우: 회원 등록
+    if (adminSession[kakaoId]?.flow === "register-member") {
+      return auth(kakaoId, utterance, res, "registerMemberFlow");
+    }
+    
+
     // ✅ 안내 메시지
     if (utterance === "전문가 등록") {
       return res.json(replyQuickReplies(
@@ -32,23 +38,19 @@ router.post("/", async (req, res) => {
     }
 
     if (utterance === "나의 회원 등록") {
+      adminSession[kakaoId] = { flow: "register-member" };
       return res.json(replyQuickReplies(
-        "📝 회원 등록을 위해 아래와 같이 입력해주세요:\n\n예: 나의 회원 김영희 01012345678 1234",
+        "📝 회원 등록을 위해 아래와 같이 입력해주세요:\n\n예: 회원 김영희 01012345678 1234",
         ["메인 메뉴"]
       ));
     }
-
-    // ✅ 전문가용 회원 등록: "나의 회원 홍길동 010... 1234"
-    if (/^나의\s*회원\s+[가-힣]{2,10}/.test(utterance)) {
-      return auth(kakaoId, utterance, res, "registerMemberByTrainer");
-    }
-    
 
     // ✅ 목록 보기
     if (/^나의\s*회원\s*(목록|현황)$/.test(utterance)) {
       return auth(kakaoId, utterance, res, "listMembers");
     }
 
+    // ✅ 과제 처리
     if (utterance === "과제 생성") {
       return assignment(kakaoId, utterance, res, "generateRoutinePreview");
     }
@@ -61,6 +63,7 @@ router.post("/", async (req, res) => {
       return assignment(kakaoId, utterance, res, "getAssignmentStatus");
     }
 
+    // ✅ 메인 메뉴
     if (/메인\s*메뉴/.test(utterance)) {
       return res.json(replyQuickReplies("🧭 트레이너 메뉴입니다. 원하는 기능을 선택해주세요.", [
         "나의 회원 등록",
@@ -70,6 +73,7 @@ router.post("/", async (req, res) => {
       ]));
     }
 
+    // ✅ fallback 기록
     await supabase.from("fallback_logs").insert({
       kakao_id: kakaoId,
       utterance,

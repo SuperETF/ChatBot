@@ -1,6 +1,8 @@
+// 📁 handlers/admin/auth/index.mjs
 import { replyText } from "../../../utils/reply.mjs";
 import registerTrainer from "./registerTrainer.mjs";
 import registerMember from "./registerMemberByTrainer.mjs";
+import registerMemberFlow from "./registerMemberFlow.mjs"; // ✅ 추가
 import listMembers from "./listMembers.mjs";
 
 export default async function auth(kakaoId, utterance, res, action) {
@@ -12,6 +14,9 @@ export default async function auth(kakaoId, utterance, res, action) {
 
     case "registerMember":
       return registerMember(kakaoId, utterance, res);
+
+    case "registerMemberFlow": // ✅ 멀티턴 회원 등록
+      return registerMemberFlow(kakaoId, utterance, res);
 
     case "listMembers":
       return listMembers(kakaoId, utterance, res);

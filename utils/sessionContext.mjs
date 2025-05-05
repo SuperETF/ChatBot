@@ -8,3 +8,4 @@ export const reserveSession = {};        // 운동 예약용
 export const cancelSession = {};         // 예약 취소용
 export const statusSession = {};         // 현황 확인용
 export const authSession = {};           // 회원/전문가 등록 시 멀티턴 보조용 (예정)
+export const adminSession = {};
