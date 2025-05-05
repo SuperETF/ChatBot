@@ -1,3 +1,4 @@
+// 📁 routes/adminWebhook.mjs
 import express from "express";
 import { supabase } from "../services/supabase.mjs";
 import auth from "../handlers/admin/auth/index.mjs";
@@ -27,7 +28,6 @@ router.post("/", async (req, res) => {
     if (adminSession[kakaoId]?.flow === "register-member") {
       return auth(kakaoId, utterance, res, "registerMemberFlow");
     }
-    
 
     // ✅ 안내 메시지
     if (utterance === "전문가 등록") {
@@ -45,7 +45,7 @@ router.post("/", async (req, res) => {
       ));
     }
 
-    // ✅ 목록 보기
+    // ✅ 회원 목록
     if (/^나의\s*회원\s*(목록|현황)$/.test(utterance)) {
       return auth(kakaoId, utterance, res, "listMembers");
     }
