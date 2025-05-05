@@ -129,8 +129,8 @@ router.post("/", async (req, res) => {
     });
   }
 
-  // ✅ 전문가 등록 처리
-  if (/^전문가\s+[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/.test(utterance)) {
+  // ✅ 전문가 등록 처리 (이름에 공백 포함 가능)
+  if (/^전문가\s+[가-힣]{2,10}(\s+[가-힣]{2,10})?\s+01[016789]\d{7,8}\s+\d{4}$/.test(utterance)) {
     return registerTrainer(kakaoId, utterance, res);
   }
 
