@@ -85,7 +85,7 @@ router.post("/", async (req, res) => {
           {
             label: "등록 시작",
             action: "block",
-            blockId: "68133a3223dc6c3328128cd3" // ✅ 등록 첫 화면 블럭 ID
+            blockId: "68133c2647b70d2c1d62b4d1" // ✅ 등록 첫 화면 블럭 ID
           }
         ]
       }
