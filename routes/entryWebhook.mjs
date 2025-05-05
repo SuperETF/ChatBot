@@ -25,7 +25,6 @@ router.post("/", async (req, res) => {
       .maybeSingle();
 
     if (trainer) {
-      // 전문가 메뉴로 이동
       return res.json({
         version: "2.0",
         template: {
@@ -40,7 +39,7 @@ router.post("/", async (req, res) => {
             {
               label: "전문가 메뉴",
               action: "block",
-              blockId: "680b09d42c50e1482b17d9ea" // ✅ 관리자 첫 블럭 ID
+              blockId: "680b09d42c50e1482b17d9ea"
             }
           ]
         }
@@ -48,7 +47,6 @@ router.post("/", async (req, res) => {
     }
 
     if (member) {
-      // 회원 메뉴로 이동
       return res.json({
         version: "2.0",
         template: {
@@ -63,14 +61,13 @@ router.post("/", async (req, res) => {
             {
               label: "회원 메뉴",
               action: "block",
-              blockId: "67e66dddabcdb40ec9fbddad" // ✅ 회원 첫 블럭 ID
+              blockId: "67e66dddabcdb40ec9fbddad"
             }
           ]
         }
       });
     }
 
-    // 미등록 사용자 → 등록 시작 블럭 이동
     return res.json({
       version: "2.0",
       template: {
@@ -85,8 +82,46 @@ router.post("/", async (req, res) => {
           {
             label: "등록 시작",
             action: "block",
-            blockId: "68133c2647b70d2c1d62b4d1" // ✅ 등록 첫 화면 블럭 ID
+            blockId: "68133a3223dc6c3328128cd3"
           }
+        ]
+      }
+    });
+  }
+
+  // ✅ 전문가 등록 입력 유도
+  if (/^전문가 등록$/.test(utterance)) {
+    return res.json({
+      version: "2.0",
+      template: {
+        outputs: [
+          {
+            simpleText: {
+              text: "전문가 등록을 위해 아래 형식으로 입력해주세요:\n\n예: 전문가 홍길동 01012345678 1234"
+            }
+          }
+        ],
+        quickReplies: [
+          { label: "메인 메뉴", action: "message", messageText: "메인 메뉴" }
+        ]
+      }
+    });
+  }
+
+  // ✅ 회원 등록 입력 유도
+  if (/^회원 등록$/.test(utterance)) {
+    return res.json({
+      version: "2.0",
+      template: {
+        outputs: [
+          {
+            simpleText: {
+              text: "회원 등록을 위해 아래 형식으로 입력해주세요:\n\n예: 홍길동 01012345678 1234"
+            }
+          }
+        ],
+        quickReplies: [
+          { label: "메인 메뉴", action: "message", messageText: "메인 메뉴" }
         ]
       }
     });
