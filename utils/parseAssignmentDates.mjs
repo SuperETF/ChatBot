@@ -1,85 +1,63 @@
-// ✅ utils/parseAssignmentDates.mjs
+// 📁 utils/parseAssignmentDates.mjs
 import dayjs from "dayjs";
-import isSameOrBefore from "dayjs/plugin/isSameOrBefore.js";
-dayjs.extend(isSameOrBefore);
+import customParseFormat from "dayjs/plugin/customParseFormat.js";
+import "dayjs/locale/ko.js";
 
+dayjs.extend(customParseFormat);
+dayjs.locale("ko");
+
+/**
+ * 자연어 입력을 파싱해서 과제 시작일/종료일 반환
+ * @param {string} input
+ * @returns { startDate: string, endDate: string, duration: number }
+ */
 export function parseNaturalDatePeriod(input) {
-  const now = dayjs();
+  const today = dayjs();
+  const lower = input.toLowerCase();
 
-  // ✅ 내일부터 N일간
-  if (/내일부터\s*(\d+)일간?/.test(input)) {
-    const days = parseInt(RegExp.$1, 10);
-    const start = now.add(1, "day");
-    const end = start.add(days - 1, "day");
-    return { start, end, repeat_type: "매일" };
+  // 예: "내일부터 3일간"
+  if (/내일.*(\d+)일/.test(lower)) {
+    const days = parseInt(lower.match(/(\d+)일/)[1]);
+    const startDate = today.add(1, "day");
+    return {
+      startDate: startDate.format("YYYY-MM-DD"),
+      endDate: startDate.add(days - 1, "day").format("YYYY-MM-DD"),
+      duration: days
+    };
   }
 
-  // ✅ 다음 주 N일간
-  if (/다음 주\s*(\d+)일간?/.test(input)) {
-    const days = parseInt(RegExp.$1, 10);
-    const start = now.startOf("week").add(1, "week").add(1, "day");
-    const end = start.add(days - 1, "day");
-    return { start, end, repeat_type: "매일" };
+  // 예: "오늘부터 5일"
+  if (/오늘.*(\d+)일/.test(lower)) {
+    const days = parseInt(lower.match(/(\d+)일/)[1]);
+    return {
+      startDate: today.format("YYYY-MM-DD"),
+      endDate: today.add(days - 1, "day").format("YYYY-MM-DD"),
+      duration: days
+    };
   }
 
-  // ✅ 이번 주 월~금 매일
-  if (/이번 주.*월[~/-]?금.*매일/.test(input)) {
-    const start = now.startOf("week").add(1, "day");
-    const end = start.add(4, "day");
-    return { start, end, repeat_type: "매일" };
+  // 예: "5월 10일부터 5일"
+  if (/(\d{1,2})월\s*(\d{1,2})일.*부터.*(\d+)일/.test(lower)) {
+    const [, mm, dd, days] = lower.match(/(\d{1,2})월\s*(\d{1,2})일.*부터.*(\d+)일/).map(Number);
+    const startDate = dayjs(`${dayjs().year()}-${mm}-${dd}`);
+    return {
+      startDate: startDate.format("YYYY-MM-DD"),
+      endDate: startDate.add(days - 1, "day").format("YYYY-MM-DD"),
+      duration: days
+    };
   }
 
-  // ✅ 이번 주 요일 리스트 (월/수/금 등)
-  if (/이번 주\s*([월화수목금토일]+(\/?[월화수목금토일]+)*)/.test(input)) {
-    const matched = input.match(/이번 주\s*([월화수목금토일\/]+)/);
-    const weekdaysText = matched[1];
-    const start = now.startOf("week").add(1, "day");
-    const end = start.add(6, "day");
-    return { start, end, repeat_type: weekdaysText };
+  // 예: "5월 10일부터 5월 14일까지"
+  if (/(\d{1,2})월\s*(\d{1,2})일.*부터.*(\d{1,2})월\s*(\d{1,2})일.*까지/.test(lower)) {
+    const [, mm1, dd1, mm2, dd2] = lower.match(/(\d{1,2})월\s*(\d{1,2})일.*부터.*(\d{1,2})월\s*(\d{1,2})일/).map(Number);
+    const startDate = dayjs(`${dayjs().year()}-${mm1}-${dd1}`);
+    const endDate = dayjs(`${dayjs().year()}-${mm2}-${dd2}`);
+    return {
+      startDate: startDate.format("YYYY-MM-DD"),
+      endDate: endDate.format("YYYY-MM-DD"),
+      duration: endDate.diff(startDate, "day") + 1
+    };
   }
 
-  // ✅ 단일 날짜 하루 (ex: 수요일 하루만)
-  if (/([월화수목금토일])요일.*하루/.test(input)) {
-    const map = { "일": 0, "월": 1, "화": 2, "수": 3, "목": 4, "금": 5, "토": 6 };
-    const day = map[RegExp.$1];
-    const date = findNextWeekday(now, day);
-    return { start: date, end: date, repeat_type: RegExp.$1 };
-  }
-
-  return null;
-}
-
-function findNextWeekday(base, targetDay) {
-  let date = base.clone();
-  while (date.day() !== targetDay) {
-    date = date.add(1, "day");
-  }
-  return date;
-}
-
-export function parseWeekdays(text) {
-  const map = { "일": 0, "월": 1, "화": 2, "수": 3, "목": 4, "금": 5, "토": 6 };
-  const matched = text.match(/[월화수목금토일]/g);
-  return matched ? [...new Set(matched)].map(d => map[d]) : [];
-}
-
-export function getRepeatDates(start, end, typeOrWeekdays) {
-  const result = [];
-  let current = start.clone();
-
-  while (current.isSameOrBefore(end, "day")) {
-    if (typeOrWeekdays === "매일") {
-      result.push(current.format("YYYY-MM-DD"));
-    } else if (typeOrWeekdays === "격일") {
-      result.push(current.format("YYYY-MM-DD"));
-      current = current.add(1, "day");
-    } else if (Array.isArray(typeOrWeekdays)) {
-      if (typeOrWeekdays.includes(current.day())) {
-        result.push(current.format("YYYY-MM-DD"));
-      }
-    }
-    current = current.add(1, "day");
-  }
-
-  return result;
+  return null; // 파싱 실패
 }

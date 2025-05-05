@@ -12,9 +12,9 @@ router.post("/", async (req, res) => {
   const utterance = (req.body.userRequest?.utterance || "").trim();
   const kakaoId = req.body.userRequest?.user?.id;
 
-  console.log("📩 [ENTRY] POST 요청 수신:", utterance);
+  console.log("📩 [ENTRY] 발화:", utterance);
 
-  // ✅ 사용자 역할 판단
+  // 1. 역할 판단
   const { data: trainer } = await supabase
     .from("trainers")
     .select("id")
@@ -27,57 +27,63 @@ router.post("/", async (req, res) => {
     .eq("kakao_id", kakaoId)
     .maybeSingle();
 
-  // ✅ 트레이너: adminWebhook으로 포워딩
-  if (trainer) {
-    console.log("➡️ 트레이너 → adminWebhook으로 포워딩");
-    const { data } = await axios.post("https://yourdomain.com/kakao/admin", req.body);
-    return res.json(data);
-  }
+  const role = trainer ? "trainer" : member ? "member" : "guest";
 
-  // ✅ 회원: memberWebhook으로 포워딩
-  if (member) {
-    console.log("➡️ 회원 → memberWebhook으로 포워딩");
-    const { data } = await axios.post("https://yourdomain.com/kakao/webhook", req.body);
-    return res.json(data);
-  }
+  // 2. 인텐트 추출
+  const intent = (() => {
+    if (/과제 생성/.test(utterance)) return "create-assignment";
+    if (/오늘 과제/.test(utterance)) return "today-assignment";
+    if (/회원 등록/.test(utterance)) return "register-member";
+    if (/전문가 등록/.test(utterance)) return "register-trainer";
+    if (["메뉴", "홈", "기능"].includes(utterance)) return "menu";
+    return "unknown";
+  })();
 
-  // ✅ 미등록자만 직접 처리
-  if (/^전문가\s+[가-힣]{2,10}/.test(utterance)) {
-    return registerTrainer(kakaoId, utterance, res);
-  }
+  // 3. 라우팅 테이블 정의
+  const routingTable = {
+    trainer: {
+      "create-assignment": { forward: "/kakao/admin" },
+      "register-member": { forward: "/kakao/admin" },
+      "menu": { forward: "/kakao/admin" },
+    },
+    member: {
+      "today-assignment": { forward: "/kakao/webhook" },
+      "menu": { forward: "/kakao/webhook" },
+    },
+    guest: {
+      "register-member": { handler: registerMemberBySelf },
+      "register-trainer": { handler: registerTrainer },
+      "menu": { handler: routeToRoleMenu },
+    }
+  };
 
-  if (/^회원\s+[가-힣]{2,10}/.test(utterance)) {
-    return registerMemberBySelf(kakaoId, utterance, res);
-  }
+  const route = routingTable[role]?.[intent];
 
-  if (["메뉴", "등록", "홈"].includes(utterance)) {
-    return routeToRoleMenu(kakaoId, res);
-  }
-
-  if (utterance === "회원 등록") {
+  // 4. 라우팅 처리
+  if (!route) {
     return res.json({
       version: "2.0",
       template: {
-        outputs: [{
-          simpleText: {
-            text: "회원 등록을 위해 아래 형식으로 입력해 주세요:\n\n예: 회원 김철수 01012345678 1234"
+        outputs: [
+          {
+            simpleText: {
+              text: "❓ 요청하신 기능을 인식하지 못했습니다. 다시 시도해 주세요."
+            }
           }
-        }]
+        ]
       }
     });
   }
 
-  // ✅ fallback 처리
-  return res.json({
-    version: "2.0",
-    template: {
-      outputs: [{
-        simpleText: {
-          text: "‘회원 김영희 01012345678 1234’ 또는 ‘전문가 홍길동 01012345678 0412’ 형식으로 입력해 주세요."
-        }
-      }]
-    }
-  });
+  if (route.forward) {
+    console.log(`🔁 포워딩 → ${route.forward}`);
+    const { data } = await axios.post(`https://yourdomain.com${route.forward}`, req.body);
+    return res.json(data);
+  }
+
+  if (route.handler) {
+    return route.handler(kakaoId, utterance, res);
+  }
 });
 
 export default router;
