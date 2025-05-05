@@ -39,7 +39,7 @@ router.post("/", async (req, res) => {
             {
               label: "전문가 메뉴",
               action: "block",
-              blockId: "680b09d42c50e1482b17d9ea"
+              blockId: "68133a8b2c50e1482b18ddfd"
             }
           ]
         }
@@ -61,7 +61,7 @@ router.post("/", async (req, res) => {
             {
               label: "회원 메뉴",
               action: "block",
-              blockId: "67e66dddabcdb40ec9fbddad"
+              blockId: "67e66dfba6c9712a60fb0f93"
             }
           ]
         }
@@ -82,7 +82,7 @@ router.post("/", async (req, res) => {
           {
             label: "등록 시작",
             action: "block",
-            blockId: "68133a3223dc6c3328128cd3"
+            blockId: "68133c2647b70d2c1d62b4d1"
           }
         ]
       }
