@@ -1,6 +1,7 @@
 // 📁 routes/entryWebhook.mjs
 import express from "express";
 import { supabase } from "../services/supabase.mjs";
+import axios from "axios";
 import registerTrainer from "../handlers/entry/registerTrainer.mjs";
 import registerMemberBySelf from "../handlers/entry/registerMemberBySelf.mjs";
 import routeToRoleMenu from "../handlers/entry/routeToRoleMenu.mjs";
@@ -13,42 +14,46 @@ router.post("/", async (req, res) => {
 
   console.log("📩 [ENTRY] POST 요청 수신:", utterance);
 
-  // ✅ 트레이너인지 확인 → 트레이너는 여기서 회원 등록 못함
+  // ✅ 사용자 역할 판단
   const { data: trainer } = await supabase
     .from("trainers")
     .select("id")
     .eq("kakao_id", kakaoId)
     .maybeSingle();
 
-  if (trainer && utterance.startsWith("회원")) {
-    return res.json({
-      version: "2.0",
-      template: {
-        outputs: [{
-          simpleText: {
-            text: "⚠️ 트레이너는 '나의 회원 등록' 메뉴를 통해 회원을 등록해 주세요."
-          }
-        }]
-      }
-    });
+  const { data: member } = await supabase
+    .from("members")
+    .select("id")
+    .eq("kakao_id", kakaoId)
+    .maybeSingle();
+
+  // ✅ 트레이너: adminWebhook으로 포워딩
+  if (trainer) {
+    console.log("➡️ 트레이너 → adminWebhook으로 포워딩");
+    const { data } = await axios.post("https://yourdomain.com/kakao/admin", req.body);
+    return res.json(data);
   }
 
-  // ✅ 전문가 등록 (스스로)
+  // ✅ 회원: memberWebhook으로 포워딩
+  if (member) {
+    console.log("➡️ 회원 → memberWebhook으로 포워딩");
+    const { data } = await axios.post("https://yourdomain.com/kakao/webhook", req.body);
+    return res.json(data);
+  }
+
+  // ✅ 미등록자만 직접 처리
   if (/^전문가\s+[가-힣]{2,10}/.test(utterance)) {
     return registerTrainer(kakaoId, utterance, res);
   }
 
-  // ✅ 일반 회원 등록
   if (/^회원\s+[가-힣]{2,10}/.test(utterance)) {
     return registerMemberBySelf(kakaoId, utterance, res);
   }
 
-  // ✅ 메뉴 진입
   if (["메뉴", "등록", "홈"].includes(utterance)) {
     return routeToRoleMenu(kakaoId, res);
   }
 
-  // ✅ 안내 메시지
   if (utterance === "회원 등록") {
     return res.json({
       version: "2.0",
@@ -62,6 +67,7 @@ router.post("/", async (req, res) => {
     });
   }
 
+  // ✅ fallback 처리
   return res.json({
     version: "2.0",
     template: {
