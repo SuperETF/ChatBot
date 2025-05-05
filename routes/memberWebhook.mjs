@@ -6,7 +6,6 @@ import getTodayAssignment from "../handlers/member/assignment/getTodayAssignment
 import completeTodayAssignments from "../handlers/member/assignment/completeTodayAssignments.mjs";
 import getAssignmentStatus from "../handlers/member/assignment/getAssignmentStatus.mjs";
 import startAssignmentSchedule from "../handlers/member/assignment/startAssignmentSchedule.mjs";
-import completeAssignmentSchedule from "../handlers/member/assignment/completeAssignmentSchedule.mjs";
 import auth from "../handlers/member/auth/index.mjs";
 import booking, { sessionContext } from "../handlers/member/booking/index.mjs";
 import { cancelContext } from "../handlers/member/booking/showCancelableReservations.mjs";
@@ -70,22 +69,19 @@ router.post("/", async (req, res) => {
       return booking(kakaoId, utterance, res, "showMyReservations");
     }
 
-    // ✅ 과제 멀티턴: 개별 시작/완료
+    // ✅ 과제 시작
     if (/^과제시작_\d+$/.test(utterance)) {
       return startAssignmentSchedule(kakaoId, utterance, res);
     }
 
-    if (/^과제완료_\d+$/.test(utterance)) {
-      return completeAssignmentSchedule(kakaoId, utterance, res);
+    // ✅ 과제 완료 → completeTodayAssignments로 위임
+    if (/^과제완료_\d+$/.test(utterance) || utterance === "오늘 과제 완료") {
+      return completeTodayAssignments(kakaoId, utterance, res);
     }
 
-    // ✅ 오늘 과제 확인/완료
+    // ✅ 오늘 과제 조회
     if (/^오늘\s*과제$/.test(utterance)) {
       return getTodayAssignment(kakaoId, utterance, res);
-    }
-
-    if (/^오늘\s*과제\s*완료$/.test(utterance)) {
-      return completeTodayAssignments(kakaoId, utterance, res);
     }
 
     // ✅ 과제 현황
