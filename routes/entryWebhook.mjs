@@ -129,24 +129,31 @@ router.post("/", async (req, res) => {
     });
   }
 
-  // ✅ 전문가 등록 처리 (이름에 공백 포함 가능)
+  // ✅ 전문가 등록 처리 (이름 공백 포함 허용 + 로그)
   if (/^전문가\s+[가-힣]{2,10}(\s+[가-힣]{2,10})?\s+01[016789]\d{7,8}\s+\d{4}$/.test(utterance)) {
+    console.log("✅ 전문가 등록 정규식 매칭 성공:", utterance);
     return registerTrainer(kakaoId, utterance, res);
+  } else if (/^전문가/.test(utterance)) {
+    console.warn("❌ 전문가 등록 정규식 매칭 실패:", utterance);
   }
 
-  // ✅ 회원 등록 처리
+  // ✅ 회원 등록 처리 + 로그
   if (/^[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/.test(utterance)) {
+    console.log("✅ 회원 등록 정규식 매칭 성공:", utterance);
     return registerMemberBySelf(kakaoId, utterance, res);
+  } else if (/^([가-힣]+\s+01\d+)/.test(utterance)) {
+    console.warn("❌ 회원 등록 정규식 매칭 실패:", utterance);
   }
 
-  // fallback
+  // ✅ fallback 처리 + 로그
+  console.warn("📛 fallback 발생 - 처리되지 않은 발화:", utterance);
   return res.json({
     version: "2.0",
     template: {
       outputs: [
         {
           simpleText: {
-            text: "❓ 요청하신 기능을 이해하지 못했습니다. '등록'이라고 입력해보세요."
+            text: `❓ 요청하신 기능을 이해하지 못했습니다.\n입력하신 문장: \"${utterance}\"\n\n'등록'이라고 다시 입력해보세요.`
           }
         }
       ]
