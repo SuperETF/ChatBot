@@ -129,19 +129,19 @@ router.post("/", async (req, res) => {
     });
   }
 
-  // ✅ 전문가 등록 처리 (이름 공백 포함 허용 + 로그)
-  if (/^전문가\s+[가-힣]{2,10}(\s+[가-힣]{2,10})?\s+01[016789]\d{7,8}\s+\d{4}$/.test(utterance)) {
+  // ✅ 전문가 등록 처리 (공백 포함, 하이픈 허용, 이름 유연)
+  if (/^전문가\s+[가-힣\s]{2,20}\s+01[016789][-]?\d{3,4}[-]?\d{4}\s+\d{4}$/.test(utterance)) {
     console.log("✅ 전문가 등록 정규식 매칭 성공:", utterance);
     return registerTrainer(kakaoId, utterance, res);
   } else if (/^전문가/.test(utterance)) {
     console.warn("❌ 전문가 등록 정규식 매칭 실패:", utterance);
   }
 
-  // ✅ 회원 등록 처리 + 로그
-  if (/^[가-힣]{2,10}\s+01[016789]\d{7,8}\s+\d{4}$/.test(utterance)) {
+  // ✅ 회원 등록 처리 (하이픈 허용, 이름 단어 1개)
+  if (/^[가-힣]{2,10}\s+01[016789][-]?\d{3,4}[-]?\d{4}\s+\d{4}$/.test(utterance)) {
     console.log("✅ 회원 등록 정규식 매칭 성공:", utterance);
     return registerMemberBySelf(kakaoId, utterance, res);
-  } else if (/^([가-힣]+\s+01\d+)/.test(utterance)) {
+  } else if (/^[가-힣]+\s+01/.test(utterance)) {
     console.warn("❌ 회원 등록 정규식 매칭 실패:", utterance);
   }
 
