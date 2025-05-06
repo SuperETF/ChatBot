@@ -5,7 +5,7 @@ export default async function registerTrainer(kakaoId, utterance, res) {
   try {
     // ✅ 정규식: 하이픈 유무 허용, 010으로 시작하는 번호, 3~4자리 중간번호, 인증번호 4자리
     const match = utterance.match(
-      /^전문가\s+([가-힣]{2,10})\s+(01[016789][-]?\d{3,4}[-]?\d{4})\s+(\d{4})$/
+      /^전문가\s+([가-힣]{2,10}(?:\s+[가-힣]{2,10})?)\s+(01[016789][-]?\d{3,4}[-]?\d{4})\s+(\d{4})$/
     );
 
     if (!match) {
