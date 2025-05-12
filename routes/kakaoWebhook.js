@@ -21,7 +21,11 @@ router.post('/', async (req, res) => {
   if (["만성 통증", "체형 교정", "통증과 교정"].includes(utterance)) {
     return handleProgramChoice(kakaoId, utterance, res);
   }
-
+  if (utterance === '병력청취 시작') {
+    console.log('[DEBUG] 병력청취 시작 발화 인식됨');
+    return handleIntakeStep(kakaoId, utterance, res);
+  }
+  
   // ✅ 2. 신청 전 개인정보 동의서 출력
   if (utterance === '신청하기') {
     return handleConsent(kakaoId, res);
