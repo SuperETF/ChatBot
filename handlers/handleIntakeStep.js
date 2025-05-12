@@ -1,38 +1,18 @@
-import {
-    getSession,
-    saveAnswer,
-    updateSessionStep,
-    deleteSession
-  } from '../services/intakeService.js';
-  
-  const intakeSteps = ['symptom_area', 'duration', 'diagnosis', 'exercise_habit'];
-  
-  const stepPrompts = {
-    symptom_area: {
-      question: '어느 부위가 가장 불편하신가요?',
-      options: ['목', '어깨', '허리', '무릎', '기타']
-    },
-    duration: {
-      question: '언제부터 통증이 있었나요?',
-      options: ['1일', '1주', '1개월 이상', '기억 안남']
-    },
-    diagnosis: {
-      question: '병원에서 진단받은 적이 있나요?',
-      options: ['예', '아니오', '기억 안남']
-    },
-    exercise_habit: {
-      question: '평소에 운동을 하시나요?',
-      options: ['네', '아니요', '가끔']
-    }
-  };
-  
-  export default async function handleIntakeStep(kakaoId, utterance, res) {
+export default async function handleIntakeStep(kakaoId, utterance, res) {
     const { data: session, error } = await getSession(kakaoId);
+  
+    // ✅ session 없을 때는 병력청취 시작 유도
     if (!session || error) {
       return res.status(200).json({
         version: '2.0',
         template: {
-          outputs: [{ simpleText: { text: '❌ 먼저 "병력청취 시작"을 눌러주세요!' } }]
+          outputs: [
+            {
+              simpleText: {
+                text: '❌ 먼저 "병력청취 시작"을 눌러주세요!'
+              }
+            }
+          ]
         }
       });
     }
