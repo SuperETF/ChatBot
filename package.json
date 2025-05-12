@@ -1,16 +1,16 @@
 {
   "name": "kakao-gym-bot",
-  "type": "module",
   "version": "1.0.0",
-  "main": "server.mjs",
+  "type": "module",
+  "main": "index.js",
   "scripts": {
-    "start": "node server.mjs",
-    "dev": "nodemon server.mjs"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
+  "description": "AI 기반 피트니스 챗봇 시스템",
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "AI 기반 피트니스 챗봇 시스템",
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",
     "axios": "^1.9.0",
